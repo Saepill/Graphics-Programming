@@ -34,7 +34,7 @@ public:
 		return program;
 	}
 
-	void load_texture(GLuint textureID,  char const* filename, GLint internalformat = GL_RGB, GLenum inputColorformat = GL_RGB)
+	void load_texture(GLuint textureID, char const* filename, GLint internalformat = GL_RGB, GLenum inputColorformat = GL_RGB)
 	{
 		// 텍스처 객체 만들고 바인딩		
 		glBindTexture(GL_TEXTURE_2D, textureID);
@@ -69,12 +69,34 @@ public:
 		glGenBuffers(3, VBOs);
 		glGenBuffers(2, EBOs);
 		glGenTextures(3, textures);
+		glGenFramebuffers(1, &FBO);
 
 		stbi_set_flip_vertically_on_load(true);
 
 		load_texture(textures[0], "wall.jpg", GL_RGB, GL_RGB);
 		load_texture(textures[1], "container2.png", GL_RGB, GL_RGBA);
 		load_texture(textures[2], "container2_specular.png", GL_RGB, GL_RGBA);
+
+		// 프레임버퍼
+		glBindFramebuffer(GL_FRAMEBUFFER, FBO);
+		// color buffer 텍스처 생성 및 연결
+		glGenTextures(1, &FBO_texture);
+		glBindTexture(GL_TEXTURE_2D, FBO_texture);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, info.windowWidth, info.windowHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, FBO_texture, 0);
+
+		// depth&stencil buffer를 위한 Render Buffer Object 생성 및 연결
+		glGenRenderbuffers(1, &RBO);
+		glBindRenderbuffer(GL_RENDERBUFFER, RBO);
+		glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, info.windowWidth, info.windowHeight);
+		glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, RBO);
+
+		// 잘 연결되었는지 체크
+		if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+			glfwTerminate();
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 
 
@@ -260,8 +282,11 @@ public:
 	virtual void shutdown()
 	{
 		glDeleteTextures(3, textures);
+		glDeleteTextures(1, &FBO_texture);
 		glDeleteBuffers(2, EBOs);
 		glDeleteBuffers(3, VBOs);
+		glDeleteFramebuffers(1, &FBO);
+
 		glDeleteVertexArrays(3, VAOs);
 		glDeleteProgram(shader_programs[0]);
 		glDeleteProgram(shader_programs[1]);
@@ -271,13 +296,6 @@ public:
 	// 렌더링 virtual 함수를 작성해서 오버라이딩한다.
 	virtual void render(double currentTime)
 	{
-		//currentTime = 1.46;
-		//const GLfloat color[] = { (float)sin(currentTime) * 0.5f + 0.5f, (float)cos(currentTime) * 0.5f + 0.5f, 0.0f, 1.0f };
-		const GLfloat black[] = { 0.0f, 0.0f, 0.0f, 1.0f };
-		glClearBufferfv(GL_COLOR, 0, black);
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		glEnable(GL_DEPTH_TEST);
-		glEnable(GL_CULL_FACE);
 
 		GLint uniform_transform1 = glGetUniformLocation(shader_programs[0], "transform");
 		GLint uniform_transform2 = glGetUniformLocation(shader_programs[1], "transform");
@@ -290,6 +308,18 @@ public:
 		vmath::mat4 lookAt = vmath::lookat(eye, center, up);
 		float fov = 50.f;// (float)cos(currentTime)*20.f + 50.0f;
 		vmath::mat4 projM = vmath::perspective(fov, info.windowWidth / (float)info.windowHeight, 0.1f, 1000.0f);
+
+
+		// Render-To-Texture Framebuffer 바인딩 ----------------------------------------------------------------------
+		// FBO 바인딩
+		glBindFramebuffer(GL_FRAMEBUFFER, FBO);
+		// FBO에 연결된 버퍼들의 값을 지우고, 뎁스 테스팅 활성화
+		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		glEnable(GL_DEPTH_TEST);
+		glEnable(GL_CULL_FACE);
+
+		// Do 1st Rendering
 
 		/*
 		// 바닥 그리기 ---------------------------------------
@@ -306,7 +336,7 @@ public:
 		vmath::vec3 lightPos = vmath::vec3((float)sin(currentTime * 0.5f), 0.25f, (float)cos(currentTime * 0.5f) * 0.7f);// (0.0f, 0.5f, 0.0f);
 
 		vmath::vec3 pointLightPos[] = { vmath::vec3((float)sin(currentTime * 0.5f), 0.25f, (float)cos(currentTime * 0.5f) * 0.7f),
-										vmath::vec3( 0.25f, (float)sin(currentTime * 1.f), (float)cos(currentTime * 1.f) * 0.7f),
+										vmath::vec3(0.25f, (float)sin(currentTime * 1.f), (float)cos(currentTime * 1.f) * 0.7f),
 										vmath::vec3((float)cos(currentTime * 1.5f) * 0.7f, (float)sin(currentTime * 1.5f) * 0.7f , 0.25f) };
 		vmath::vec3 pointLightColors[] = { vmath::vec3(1.f, 0.f, 0.f),
 											vmath::vec3(0.f, 1.f, 0.f),
@@ -395,7 +425,7 @@ public:
 
 		glDrawArrays(GL_TRIANGLES, 0, 36);
 
-		
+
 
 		// 피라미드 그리기 (광원) ---------------------------------------
 		float move_y = (float)cos(currentTime) * 0.2f + 0.5f;
@@ -419,7 +449,7 @@ public:
 
 		glUniform3fv(glGetUniformLocation(shader_programs[2], "color"), 1, pointLightColors[1]);
 		transform = vmath::translate(pointLightPos[1]) *
-			vmath::rotate(angle , 0.0f, 1.0f, 0.0f) *
+			vmath::rotate(angle, 0.0f, 1.0f, 0.0f) *
 			vmath::scale(scaleFactor, scaleFactor, scaleFactor);
 
 
@@ -436,12 +466,41 @@ public:
 		glDrawElements(GL_TRIANGLES, 24, GL_UNSIGNED_INT, 0);
 
 
+		// 기본 Framebuffer로 되돌리기
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		glDisable(GL_DEPTH_TEST);
+		// 버퍼들의 값 지우기
+		glClearColor(0.5f, 0.5f, 0.5f, 1.0f);
+		glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
+		glEnable(GL_DEPTH_TEST);
+
+		// FBO Texture를 쉐이더 프로그램에 연결
+		glUseProgram(shader_programs[0]);
+		//glUniformMatrix4fv(uniform_transform1, 1, GL_FALSE, projM * lookAt * rotateM * vmath::scale(1.3f) * vmath::translate(0.0f, -0.25f, 0.0f));
+		glUniform1i(glGetUniformLocation(shader_programs[0], "texture1"), 0);
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, FBO_texture);
+		
+		glBindVertexArray(VAOs[1]);
+
+		for (int i = 0; i < boxPositions.size(); i++)
+		{
+			float angle = 10.f * i * currentTime;
+			vmath::mat4 model = vmath::translate(boxPositions[i]) *
+				vmath::rotate(angle, 0.0f, 0.3f, 1.0f) *
+				vmath::rotate(angle, 1.0f, 0.3f, 0.5f) *
+				vmath::scale(1.0f);
+			glUniformMatrix4fv(uniform_transform1, 1, GL_FALSE, projM * lookAt * model);
+			glDrawArrays(GL_TRIANGLES, 0, 36);
+		}
+		
+
 	}
 
 private:
 	GLuint shader_programs[3];
-	GLuint VAOs[3], VBOs[3], EBOs[2];
-	GLuint textures[3];
+	GLuint VAOs[3], VBOs[3], EBOs[2], FBO, RBO;
+	GLuint textures[3], FBO_texture;
 
 	std::vector<vmath::vec3> boxPositions;
 };
