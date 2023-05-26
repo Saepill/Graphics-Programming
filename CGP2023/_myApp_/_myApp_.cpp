@@ -3,10 +3,12 @@
 #include <vmath.h>
 #include <shader.h>
 #include <vector>
-
+#include "model.h"
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
+
+
 
 // sb6::application을 상속받는다.
 class my_application : public sb7::application

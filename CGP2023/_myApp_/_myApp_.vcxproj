@@ -127,6 +127,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="model.h" />
     <ClInclude Include="stb_image.h" />
   </ItemGroup>
   <ItemGroup>
