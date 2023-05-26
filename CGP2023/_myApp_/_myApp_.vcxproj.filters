@@ -52,5 +52,11 @@
     <None Include="shader_program_screen_fs.glsl">
       <Filter>소스 파일</Filter>
     </None>
+    <None Include="multiple_lights_vs.glsl">
+      <Filter>소스 파일</Filter>
+    </None>
+    <None Include="multiple_lights_fs.glsl">
+      <Filter>소스 파일</Filter>
+    </None>
   </ItemGroup>
 </Project>

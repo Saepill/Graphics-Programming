@@ -1,12 +1,10 @@
-
 #include <sb7.h>
 #include <vmath.h>
-#include <vector>
 #include <string>
-#include "stb_image.h"
+#include <vector>
 
 
-class model {
+class Model {
 public:
 	std::vector<vmath::vec3> vPositions;
 	std::vector<vmath::vec2> vTexCoords;
@@ -17,17 +15,18 @@ public:
 	float shininess;
 	vmath::vec3 defaultColor, defaultSpecular;
 
-	model() {
+	GLuint VAO;
+
+	Model() {
 		shininess = 32.f;
 		useDiffuseMap = false;
 		useSpecularMap = false;
 
 		defaultColor = vmath::vec3(1.0f, 1.0f, 1.0f);
 		defaultSpecular = vmath::vec3(0.0f, 0.0f, 0.0f);
-
 	}
 
-	~model() {
+	~Model() {
 		glDeleteTextures(1, &diffuseMap);
 		glDeleteTextures(1, &specularMap);
 
@@ -38,7 +37,7 @@ public:
 		glDeleteVertexArrays(1, &VAO);
 	}
 
-	void Init() {
+	void init() {
 		glGenVertexArrays(1, &VAO);
 		glGenBuffers(1, &VBO_positions);
 		glGenBuffers(1, &VBO_texCoords);
@@ -57,7 +56,7 @@ public:
 		defaultSpecular = _color;
 	}
 
-	void setupMesh(int _numVertices, GLfloat* _vPositions, GLfloat* _vTexCoords = NULL, GLfloat* _vNormals = NULL ) {
+	void setupMesh(int _numVertices, GLfloat* _vPositions, GLfloat* _vTexCoords = NULL, GLfloat* _vNormals = NULL) {
 		// 1. copy data from arrays
 		for (int i = 0; i < _numVertices; i++) {
 			vmath::vec3 position;
@@ -80,8 +79,8 @@ public:
 			for (int i = 0; i < _numVertices; i++) {
 				vmath::vec3 normal;
 				normal[0] = _vNormals[i * 3 + 0];
-				normal[1] = _vNormals[i * 3 + 0];
-				normal[2] = _vNormals[i * 3 + 0];
+				normal[1] = _vNormals[i * 3 + 1];
+				normal[2] = _vNormals[i * 3 + 2];
 				this->vNormals.push_back(normal);
 			}
 		}
@@ -96,13 +95,12 @@ public:
 			vIndices.push_back(_indices[i]);
 		}
 
-
 		glBindVertexArray(VAO);
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
 		glBufferData(GL_ELEMENT_ARRAY_BUFFER, _numIndices * sizeof(int), &vIndices[0], GL_STATIC_DRAW);
 		glBindVertexArray(0);
 	}
-	
+
 	bool loadDiffuseMap(std::string _filepath) {
 		if (loadTextureFile(diffuseMap, _filepath)) {
 			useDiffuseMap = true;
@@ -154,7 +152,6 @@ public:
 	}
 
 private:
-	GLuint VAO;
 	GLuint VBO_positions, VBO_texCoords, VBO_normals;
 	GLuint EBO;
 	bool useDiffuseMap, useSpecularMap;
@@ -167,15 +164,14 @@ private:
 		glEnableVertexAttribArray(0);
 		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
 
-		if (!(vTexCoords.empty())) {
+		if (!vTexCoords.empty()) {
 			glBindBuffer(GL_ARRAY_BUFFER, VBO_texCoords);
 			glBufferData(GL_ARRAY_BUFFER, vTexCoords.size() * sizeof(vmath::vec2), &vTexCoords[0], GL_STATIC_DRAW);
 			glEnableVertexAttribArray(1);
 			glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void*)0);
-
 		}
 
-		if (!(vNormals.empty())) {
+		if (!vNormals.empty()) {
 			glBindBuffer(GL_ARRAY_BUFFER, VBO_normals);
 			glBufferData(GL_ARRAY_BUFFER, vNormals.size() * sizeof(vmath::vec3), &vNormals[0], GL_STATIC_DRAW);
 			glEnableVertexAttribArray(2);
@@ -206,8 +202,8 @@ private:
 
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_REPEAT);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_REPEAT);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
 			stbi_image_free(data);
 			return true;
@@ -215,9 +211,6 @@ private:
 
 		stbi_image_free(data);
 		return false;
-
 	}
 
-
 };
- 

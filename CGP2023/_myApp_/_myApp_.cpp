@@ -3,10 +3,10 @@
 #include <vmath.h>
 #include <shader.h>
 #include <vector>
-#include "model.h"
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
+#include "model.h"
 
 
 
@@ -15,13 +15,13 @@ class my_application : public sb7::application
 {
 public:
 	// 쉐이더 프로그램 컴파일한다.
-	GLuint compile_shader(const char* vs_file, const char* fs_file)
+	GLuint compile_shader_model(void)
 	{
 		// 버텍스 쉐이더를 생성하고 컴파일한다.
-		GLuint vertex_shader = sb7::shader::load(vs_file, GL_VERTEX_SHADER);
+		GLuint vertex_shader = sb7::shader::load("multiple_lights_vs.glsl", GL_VERTEX_SHADER);
 
 		// 프래그먼트 쉐이더를 생성하고 컴파일한다.
-		GLuint fragment_shader = sb7::shader::load(fs_file, GL_FRAGMENT_SHADER);
+		GLuint fragment_shader = sb7::shader::load("multiple_lights_fs.glsl", GL_FRAGMENT_SHADER);
 
 		// 프로그램을 생성하고 쉐이더를 Attach시키고 링크한다.
 		GLuint program = glCreateProgram();
@@ -36,26 +36,25 @@ public:
 		return program;
 	}
 
-	void load_texture(GLuint textureID,  char const* filename, GLint internalformat = GL_RGB, GLenum inputColorformat = GL_RGB)
+	GLuint compile_shader_pp(void)
 	{
-		// 텍스처 객체 만들고 바인딩		
-		glBindTexture(GL_TEXTURE_2D, textureID);
+		// 버텍스 쉐이더를 생성하고 컴파일한다.
+		GLuint vertex_shader = sb7::shader::load("shader_program_screen_vs.glsl", GL_VERTEX_SHADER);
 
-		// 텍스처 이미지 로드하기
-		int width, height, nrChannels;
-		unsigned char* data = stbi_load(filename, &width, &height, &nrChannels, 0);
+		// 프래그먼트 쉐이더를 생성하고 컴파일한다.
+		GLuint fragment_shader = sb7::shader::load("shader_program_screen_fs.glsl", GL_FRAGMENT_SHADER);
 
-		if (data) {
-			glTexImage2D(GL_TEXTURE_2D, 0, internalformat, width, height, 0, inputColorformat, GL_UNSIGNED_BYTE, data);
-			glGenerateMipmap(GL_TEXTURE_2D);
-		}
-		stbi_image_free(data);
+		// 프로그램을 생성하고 쉐이더를 Attach시키고 링크한다.
+		GLuint program = glCreateProgram();
+		glAttachShader(program, vertex_shader);
+		glAttachShader(program, fragment_shader);
+		glLinkProgram(program);
 
-		// 텍스처 샘플링/필터링 설정
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		// 이제 프로그램이 쉐이더를 소유하므로 쉐이더를 삭제한다.
+		glDeleteShader(vertex_shader);
+		glDeleteShader(fragment_shader);
+
+		return program;
 	}
 
 	void load_buffer_texture(GLuint textureID, int width, int height)
@@ -65,160 +64,177 @@ public:
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, textureID, 0);
-		//glBindTexture(GL_TEXTURE_2D, 0);
-		//glDisable(GL_TEXTURE_2D);
+
 	}
 
 	// 애플리케이션 초기화 수행한다.
 	virtual void startup()
 	{
 		// 쉐이더 프로그램 컴파일 및 연결
-		shader_programs[0] = compile_shader("basic_texturing_vs.glsl", "basic_texturing_fs.glsl");
-		shader_programs[1] = compile_shader("basic_lighting_vs.glsl", "basic_lighting_fs.glsl");
-		shader_programs[2] = compile_shader("simple_color_vs.glsl", "simple_color_fs.glsl");
-		shader_programs[3] = compile_shader("shader_program_screen_vs.glsl", "shader_program_screen_fs.glsl");
-
-		// VAO, VBO, EBO, texture 생성
-		glGenVertexArrays(4, VAOs);
-		glGenBuffers(4, VBOs);
-		glGenBuffers(2, EBOs);
-		glGenTextures(3, textures);
-		glGenTextures(2, FBO_texture);
-		glGenFramebuffers(2, FBO);
+		shader_program_model = compile_shader_model();
+		shader_program_pp = compile_shader_pp();
 
 		stbi_set_flip_vertically_on_load(true);
 
-		load_texture(textures[0], "wall.jpg", GL_RGB, GL_RGB);
-		load_texture(textures[1], "container2.png", GL_RGB, GL_RGBA);
-		load_texture(textures[2], "container2_specular.png", GL_RGB, GL_RGBA);
-
-		// 프레임버퍼 [0]
-		glBindFramebuffer(GL_FRAMEBUFFER, FBO[0]);
-		// color buffer 텍스처 생성 및 연결
-		load_buffer_texture(FBO_texture[0], info.windowWidth, info.windowHeight);
-
-		// depth&stencil buffer를 위한 Render Buffer Object 생성 및 연결
-		glGenRenderbuffers(1, &RBO);
-		glBindRenderbuffer(GL_RENDERBUFFER, RBO);
-		glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, info.windowWidth, info.windowHeight);
-		glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, RBO);
-
-		// 잘 연결되었는지 체크
-		if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
-			glfwTerminate();
-		glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-		
-		// 프레임버퍼 [1]
-		glBindFramebuffer(GL_FRAMEBUFFER, FBO[1]);
-		load_buffer_texture(FBO_texture[1], info.windowWidth, info.windowHeight);
-
-		// 잘 연결되었는지 체크
-		if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
-			glfwTerminate();
-		glBindFramebuffer(GL_FRAMEBUFFER, 0);
-		
-
-
-		// 첫 번째 객체 정의 : 바닥 --------------------------------------------------
-		glBindVertexArray(VAOs[0]);
-		// 바닥 점들의 위치와 컬러, 텍스처 좌표를 정의한다.
-		float floor_s = 3.0f, floor_t = 3.0f;
-		GLfloat floor_vertices[] = {
-			1.0f, 0.0f, -1.0f, 1.0f, 0.0f, 0.0f, floor_s, floor_t,  // 우측 상단
-			-1.0f, 0.0f, -1.0f, 0.0f, 1.0f, 0.0f, 0.0f, floor_t,  // 좌측 상단
-			-1.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f,   // 좌측 하단
-			1.0f, 0.0f, 1.0f, 1.0f, 1.0f, 0.0f, floor_s, 0.0f   // 우측 하단
-		};
-
-		// 삼각형으로 그릴 인덱스를 정의한다.
-		GLuint floor_indices[] = {
-			0, 1, 2,	// 첫번째 삼각형
-			0, 2, 3		// 두번째 삼각형
-		};
-
-		// VBO를 생성하여 vertices 값들을 복사
-		glBindBuffer(GL_ARRAY_BUFFER, VBOs[0]);
-		glBufferData(GL_ARRAY_BUFFER, sizeof(floor_vertices), floor_vertices, GL_STATIC_DRAW);
-
-		// VBO를 나누어서 각 버텍스 속성으로 연결
-		// 위치 속성 (location = 0)
-		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
-		glEnableVertexAttribArray(0);
-		// 컬러 속성 (location = 1)
-		glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
-		glEnableVertexAttribArray(1);
-		// 텍스처 좌표 속성 (location = 2)
-		glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
-		glEnableVertexAttribArray(2);
-
-		// EBO를 생성하고 indices 값들을 복사
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBOs[0]);
-		glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(floor_indices), floor_indices, GL_STATIC_DRAW);
-
-		// VBO 및 버텍스 속성을 다 했으니 VBO와 VAO를 unbind한다.
-		glBindVertexArray(0);
-		glBindBuffer(GL_ARRAY_BUFFER, 0);
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-
-
-
-		// 두 번째 객체 정의 : 박스 1 --------------------------------------------------
-		glBindVertexArray(VAOs[1]);
+		// 첫 번째 객체 정의 : 박스 --------------------------------------------------
 		// 박스 점들의 위치와 컬러, 텍스처 좌표를 정의한다.
 		float box_s = 1.0f, box_t = 1.0f;
-		GLfloat box_vertices[] = {
+		GLfloat box_positions[] = {
 			// 뒷면
-			-0.25f, 0.5f, -0.25f, 1.0f, 0.0f, 0.0f,		box_s, box_t,	0.0f, 0.0f, -1.0f,
-			0.25f, 0.0f, -0.25f, 1.0f, 0.0f, 0.0f,		0.0f, 0.0f,		0.0f, 0.0f, -1.0f,
-			-0.25f, 0.0f, -0.25f, 1.0f, 0.0f, 0.0f,		box_s, 0.0f,	0.0f, 0.0f, -1.0f,
+			-0.25f, 0.5f, -0.25f,
+			0.25f, 0.0f, -0.25f,
+			-0.25f, 0.0f, -0.25f,
 
-			0.25f, 0.0f, -0.25f, 1.0f, 0.0f, 0.0f,		0.0f, 0.0f,		0.0f, 0.0f, -1.0f,
-			-0.25f, 0.5f, -0.25f, 1.0f, 0.0f, 0.0f,		box_s, box_t,	0.0f, 0.0f, -1.0f,
-			0.25f, 0.5f, -0.25f, 1.0f, 0.0f, 0.0f,		0.0f, box_t,	0.0f, 0.0f, -1.0f,
+			0.25f, 0.0f, -0.25f,
+			-0.25f, 0.5f, -0.25f,
+			0.25f, 0.5f, -0.25f,
 			// 우측면
-			0.25f, 0.0f, -0.25f, 0.0f, 1.0f, 0.0f,		box_s, 0.0f,	1.0f, 0.0f, 0.0f,
-			0.25f, 0.5f, -0.25f, 0.0f, 1.0f, 0.0f,		box_s, box_t,	1.0f, 0.0f, 0.0f,
-			0.25f, 0.0f, 0.25f, 0.0f, 1.0f, 0.0f,		0.0f, 0.0f,		1.0f, 0.0f, 0.0f,
+			0.25f, 0.0f, -0.25f,
+			0.25f, 0.5f, -0.25f,
+			0.25f, 0.0f, 0.25f,
 
-			0.25f, 0.0f, 0.25f, 0.0f, 1.0f, 0.0f,		0.0f, 0.0f,		1.0f, 0.0f, 0.0f,
-			0.25f, 0.5f, -0.25f, 0.0f, 1.0f, 0.0f,		box_s, box_t,	1.0f, 0.0f, 0.0f,
-			0.25f, 0.5f, 0.25f, 0.0f, 1.0f, 0.0f,		0.0f, box_t,	1.0f, 0.0f, 0.0f,
+			0.25f, 0.0f, 0.25f,
+			0.25f, 0.5f, -0.25f,
+			0.25f, 0.5f, 0.25f,
 			// 정면
-			0.25f, 0.0f, 0.25f, 0.0f, 0.0f, 1.0f,		box_s, 0.0f,	0.0f, 0.0f, 1.0f,
-			0.25f, 0.5f, 0.25f, 0.0f, 0.0f, 1.0f,		box_s, box_t,	0.0f, 0.0f, 1.0f,
-			-0.25f, 0.0f, 0.25f, 0.0f, 0.0f, 1.0f,		0.0f, 0.0f,		0.0f, 0.0f, 1.0f,
+			0.25f, 0.0f, 0.25f,
+			0.25f, 0.5f, 0.25f,
+			-0.25f, 0.0f, 0.25f,
 
-			-0.25f, 0.0f, 0.25f, 0.0f, 0.0f, 1.0f,		0.0f, 0.0f,		0.0f, 0.0f, 1.0f,
-			0.25f, 0.5f, 0.25f, 0.0f, 0.0f, 1.0f,		box_s, box_t,	0.0f, 0.0f, 1.0f,
-			-0.25f, 0.5f, 0.25f, 0.0f, 0.0f, 1.0f,		0.0f, box_t,	0.0f, 0.0f, 1.0f,
+			-0.25f, 0.0f, 0.25f,
+			0.25f, 0.5f, 0.25f,
+			-0.25f, 0.5f, 0.25f,
 			// 좌측면
-			-0.25f, 0.0f, 0.25f, 1.0f, 0.0f, 1.0f,		box_s, 0.0f,	-1.0f, 0.0f, 0.0f,
-			-0.25f, 0.5f, 0.25f, 1.0f, 0.0f, 1.0f,		box_s, box_t,	-1.0f, 0.0f, 0.0f,
-			-0.25f, 0.0f, -0.25f, 1.0f, 0.0f, 1.0f,		0.0f, 0.0f,		-1.0f, 0.0f, 0.0f,
+			-0.25f, 0.0f, 0.25f,
+			-0.25f, 0.5f, 0.25f,
+			-0.25f, 0.0f, -0.25f,
 
-			-0.25f, 0.0f, -0.25f, 1.0f, 0.0f, 1.0f,		0.0f, 0.0f,		-1.0f, 0.0f, 0.0f,
-			-0.25f, 0.5f, 0.25f, 1.0f, 0.0f, 1.0f,		box_s, box_t,	-1.0f, 0.0f, 0.0f,
-			-0.25f, 0.5f, -0.25f, 1.0f, 0.0f, 1.0f,		0.0f, box_t,	-1.0f, 0.0f, 0.0f,
+			-0.25f, 0.0f, -0.25f,
+			-0.25f, 0.5f, 0.25f,
+			-0.25f, 0.5f, -0.25f,
 			// 바닥면
-			-0.25f, 0.0f, 0.25f, 1.0f, 1.0f, 0.0f,		box_s, 0.0f,	0.0f, -1.0f, 0.0f,
-			0.25f, 0.0f, -0.25f, 1.0f, 1.0f, 0.0f,		0.0f, box_t,	0.0f, -1.0f, 0.0f,
-			0.25f, 0.0f, 0.25f, 1.0f, 1.0f, 0.0f,		0.0f, 0.0f,		0.0f, -1.0f, 0.0f,
+			-0.25f, 0.0f, 0.25f,
+			0.25f, 0.0f, -0.25f,
+			0.25f, 0.0f, 0.25f,
 
-			0.25f, 0.0f, -0.25f, 1.0f, 1.0f, 0.0f,		0.0f, box_t,	0.0f, -1.0f, 0.0f,
-			-0.25f, 0.0f, 0.25f, 1.0f, 1.0f, 0.0f,		box_s, 0.0,		0.0f, -1.0f, 0.0f,
-			-0.25f, 0.0f, -0.25f, 1.0f, 1.0f, 0.0f,		box_s, box_t,	0.0f, -1.0f, 0.0f,
+			0.25f, 0.0f, -0.25f,
+			-0.25f, 0.0f, 0.25f,
+			-0.25f, 0.0f, -0.25f,
 			// 윗면
-			-0.25f, 0.5f, -0.25f, 0.0f, 1.0f, 1.0f,		0.0f, box_t,	0.0f, 1.0f, 0.0f,
-			0.25f, 0.5f, 0.25f, 0.0f, 1.0f, 1.0f,		box_s, 0.0f,	0.0f, 1.0f, 0.0f,
-			0.25f, 0.5f, -0.25f, 0.0f, 1.0f, 1.0f,		box_s, box_t,	0.0f, 1.0f, 0.0f,
+			-0.25f, 0.5f, -0.25f,
+			0.25f, 0.5f, 0.25f,
+			0.25f, 0.5f, -0.25f,
 
-			0.25f, 0.5f, 0.25f, 0.0f, 1.0f, 1.0f,		box_s, 0.0f,	0.0f, 1.0f, 0.0f,
-			-0.25f, 0.5f, -0.25f, 0.0f, 1.0f, 1.0f,		0.0f, box_t,	0.0f, 1.0f, 0.0f,
-			-0.25f, 0.5f, 0.25f, 0.0f, 1.0f, 1.0f,		0.0f, 0.0f,		0.0f, 1.0f, 0.0f
+			0.25f, 0.5f, 0.25f,
+			-0.25f, 0.5f, -0.25f,
+			-0.25f, 0.5f, 0.25f
 		};
 
-		// 박스 10개 포지션 설정
+		GLfloat box_texCoords[] = {
+			box_s, box_t,
+			0.0f, 0.0f,
+			box_s, 0.0f,
+
+			0.0f, 0.0f,
+			box_s, box_t,
+			0.0f, box_t,
+
+			box_s, 0.0f,
+			box_s, box_t,
+			0.0f, 0.0f,
+
+			0.0f, 0.0f,
+			box_s, box_t,
+			0.0f, box_t,
+
+			box_s, 0.0f,
+			box_s, box_t,
+			0.0f, 0.0f,
+
+			0.0f, 0.0f,
+			box_s, box_t,
+			0.0f, box_t,
+
+			box_s, 0.0f,
+			box_s, box_t,
+			0.0f, 0.0f,
+
+			0.0f, 0.0f,
+			box_s, box_t,
+			0.0f, box_t,
+
+			box_s, 0.0f,
+			0.0f, box_t,
+			0.0f, 0.0f,
+
+			0.0f, box_t,
+			box_s, 0.0,
+			box_s, box_t,
+
+			0.0f, box_t,
+			box_s, 0.0f,
+			box_s, box_t,
+
+			box_s, 0.0f,
+			0.0f, box_t,
+			0.0f, 0.0f
+		};
+
+		GLfloat box_normals[] = {
+			0.0f, 0.0f, -1.0f,
+			0.0f, 0.0f, -1.0f,
+			0.0f, 0.0f, -1.0f,
+
+			0.0f, 0.0f, -1.0f,
+			0.0f, 0.0f, -1.0f,
+			0.0f, 0.0f, -1.0f,
+
+			1.0f, 0.0f, 0.0f,
+			1.0f, 0.0f, 0.0f,
+			1.0f, 0.0f, 0.0f,
+
+			1.0f, 0.0f, 0.0f,
+			1.0f, 0.0f, 0.0f,
+			1.0f, 0.0f, 0.0f,
+
+			0.0f, 0.0f, 1.0f,
+			0.0f, 0.0f, 1.0f,
+			0.0f, 0.0f, 1.0f,
+
+			0.0f, 0.0f, 1.0f,
+			0.0f, 0.0f, 1.0f,
+			0.0f, 0.0f, 1.0f,
+
+			-1.0f, 0.0f, 0.0f,
+			-1.0f, 0.0f, 0.0f,
+			-1.0f, 0.0f, 0.0f,
+
+			-1.0f, 0.0f, 0.0f,
+			-1.0f, 0.0f, 0.0f,
+			-1.0f, 0.0f, 0.0f,
+
+			0.0f, -1.0f, 0.0f,
+			0.0f, -1.0f, 0.0f,
+			0.0f, -1.0f, 0.0f,
+
+			0.0f, -1.0f, 0.0f,
+			0.0f, -1.0f, 0.0f,
+			0.0f, -1.0f, 0.0f,
+
+			0.0f, 1.0f, 0.0f,
+			0.0f, 1.0f, 0.0f,
+			0.0f, 1.0f, 0.0f,
+
+			0.0f, 1.0f, 0.0f,
+			0.0f, 1.0f, 0.0f,
+			0.0f, 1.0f, 0.0f
+		};
+
+		boxModel.init();
+		boxModel.setupMesh(36, box_positions, box_texCoords, box_normals);
+		boxModel.loadDiffuseMap("container2.png");
+		boxModel.loadSpecularMap("container2_specular.png");
+
 		boxPositions.push_back(vmath::vec3(0.0f, 0.0f, 0.0f));
 		boxPositions.push_back(vmath::vec3(2.0f, 5.0f, -15.0f));
 		boxPositions.push_back(vmath::vec3(-1.5f, -2.2f, -2.5f));
@@ -230,30 +246,8 @@ public:
 		boxPositions.push_back(vmath::vec3(1.5f, 0.2f, -1.5f));
 		boxPositions.push_back(vmath::vec3(-1.3f, 1.0f, -1.5f));
 
-		// VBO를 생성하여 vertices 값들을 복사
-		glBindBuffer(GL_ARRAY_BUFFER, VBOs[1]);
-		glBufferData(GL_ARRAY_BUFFER, sizeof(box_vertices), box_vertices, GL_STATIC_DRAW);
 
-		// VBO를 나누어서 각 버텍스 속성으로 연결
-		// 위치 속성 (location = 0)
-		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 11 * sizeof(float), (void*)0);
-		glEnableVertexAttribArray(0);
-		// 컬러 속성 (location = 1)
-		glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 11 * sizeof(float), (void*)(3 * sizeof(float)));
-		glEnableVertexAttribArray(1);
-		// 텍스처 좌표 속성 (location = 2)
-		glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 11 * sizeof(float), (void*)(6 * sizeof(float)));
-		glEnableVertexAttribArray(2);
-		// 노멀 속성 (location = 3)
-		glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, 11 * sizeof(float), (void*)(8 * sizeof(float)));
-		glEnableVertexAttribArray(3);
-
-		// VBO 및 버텍스 속성을 다 했으니 VBO와 VAO를 unbind한다.
-		glBindBuffer(GL_ARRAY_BUFFER, 0);
-		glBindVertexArray(0);
-
-		//  네 번째 객체 정의 : 피라미드 --------------------------------------------------
-		glBindVertexArray(VAOs[2]);
+		// 두 번째 객체 정의 : 피라미드 --------------------------------------------------
 		// 피라미드 점들의 위치와 컬러, 텍스처 좌표를 정의한다.
 		GLfloat pyramid_vertices[] = {
 			1.0f, 0.0f, -1.0f,    // 우측 상단
@@ -277,26 +271,46 @@ public:
 			5, 0, 3,
 		};
 
-		// VBO를 생성하여 vertices 값들을 복사
-		glBindBuffer(GL_ARRAY_BUFFER, VBOs[2]);
-		glBufferData(GL_ARRAY_BUFFER, sizeof(pyramid_vertices), pyramid_vertices, GL_STATIC_DRAW);
+		pyramidModel.init();
+		pyramidModel.setupMesh(6, pyramid_vertices);
+		pyramidModel.setupIndices(24, pyramid_indices);
+		pyramidModel.setDefaultColor(vmath::vec3(1, 1, 1));
 
-		// VBO를 나누어서 각 버텍스 속성으로 연결
-		// 위치 속성 (location = 0)
-		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
-		glEnableVertexAttribArray(0);
+		
+		glGenTextures(2, FBO_texture);
+		glGenFramebuffers(2, FBO);
 
-		// EBO를 생성하고 indices 값들을 복사
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBOs[1]);
-		glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(pyramid_indices), pyramid_indices, GL_STATIC_DRAW);
+		
+		// 프레임버퍼 [0]
+		glBindFramebuffer(GL_FRAMEBUFFER, FBO[0]);
+		// color buffer 텍스처 생성 및 연결
+		load_buffer_texture(FBO_texture[0], info.windowWidth, info.windowHeight);
 
-		// VBO 및 버텍스 속성을 다 했으니 VBO와 VAO를 unbind한다.
-		glBindVertexArray(0);
-		glBindBuffer(GL_ARRAY_BUFFER, 0);
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+		// depth&stencil buffer를 위한 Render Buffer Object 생성 및 연결
+		
+		//glGenRenderbuffers(1, &RBO);
+		//glBindRenderbuffer(GL_RENDERBUFFER, RBO);
+		//glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, info.windowWidth, info.windowHeight);
+		//glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, RBO);
+		
 
+		// 잘 연결되었는지 체크
+		if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+			glfwTerminate();
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-		glBindVertexArray(VAOs[3]);
+		
+		// 프레임버퍼 [1]
+		glBindFramebuffer(GL_FRAMEBUFFER, FBO[1]);
+		load_buffer_texture(FBO_texture[1], info.windowWidth, info.windowHeight);
+
+		// 잘 연결되었는지 체크
+		if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+			glfwTerminate();
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+		glGenVertexArrays(1, &VAO);
+		glBindVertexArray(VAO);
 		//	post-processing용 스크린 정의
 		GLfloat screenVertices[] = {
 		//NDC xy좌표 //텍스처 uv
@@ -311,7 +325,8 @@ public:
 
 
 		// VBO를 생성하여 vertices 값들을 복사
-		glBindBuffer(GL_ARRAY_BUFFER, VBOs[3]);
+		glGenBuffers(1, &VBO);
+		glBindBuffer(GL_ARRAY_BUFFER, VBO);
 		glBufferData(GL_ARRAY_BUFFER, sizeof(screenVertices), screenVertices, GL_STATIC_DRAW);
 
 		// VBO를 나누어서 각 버텍스 속성으로 연결
@@ -332,26 +347,20 @@ public:
 	// 애플리케이션 끝날 때 호출된다.
 	virtual void shutdown()
 	{
-		glDeleteTextures(3, textures);
 		glDeleteTextures(2, FBO_texture);
-		glDeleteBuffers(2, EBOs);
-		glDeleteBuffers(3, VBOs);
+		glDeleteBuffers(1, &VBO);
 		glDeleteFramebuffers(2, FBO);
-		glDeleteRenderbuffers(1, &RBO);
 
-		glDeleteVertexArrays(3, VAOs);
-		glDeleteProgram(shader_programs[0]);
-		glDeleteProgram(shader_programs[1]);
-		glDeleteProgram(shader_programs[2]);
-		glDeleteProgram(shader_programs[3]);
+		glDeleteRenderbuffers(1, &RBO);
+		glDeleteVertexArrays(1, &VAO);
+
+		glDeleteProgram(shader_program_model);
+		glDeleteProgram(shader_program_pp);
 	}
 
 	// 렌더링 virtual 함수를 작성해서 오버라이딩한다.
 	virtual void render(double currentTime)
 	{
-
-		GLint uniform_transform1 = glGetUniformLocation(shader_programs[0], "transform");
-		GLint uniform_transform2 = glGetUniformLocation(shader_programs[1], "transform");
 
 		// 카메라 매트릭스 계산
 		float distance = 2.f;
@@ -365,25 +374,12 @@ public:
 		
 		// Render-To-Texture Framebuffer 바인딩 ----------------------------------------------------------------------
 		// FBO 바인딩
-		glBindFramebuffer(GL_FRAMEBUFFER, FBO[0]);
+		//glBindFramebuffer(GL_FRAMEBUFFER, FBO[0]);
 		// FBO에 연결된 버퍼들의 값을 지우고, 뎁스 테스팅 활성화
 		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		glEnable(GL_DEPTH_TEST);
 		glEnable(GL_CULL_FACE);
-		
-		// Do 1st Rendering
-
-		/*
-		// 바닥 그리기 ---------------------------------------
-		glUseProgram(shader_programs[0]);
-		glUniformMatrix4fv(glGetUniformLocation(shader_programs[0], "transform"), 1, GL_FALSE, projM * lookAt * vmath::scale(1.5f));
-		glUniform1i(glGetUniformLocation(shader_programs[0], "texture1"), 0);
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, textures[0]);
-		glBindVertexArray(VAOs[0]);
-		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-		*/
 
 		// 라이팅 설정 ---------------------------------------
 		vmath::vec3 lightPos = vmath::vec3((float)sin(currentTime * 0.5f), 0.25f, (float)cos(currentTime * 0.5f) * 0.7f);// (0.0f, 0.5f, 0.0f);
@@ -399,72 +395,56 @@ public:
 		vmath::vec3 viewPos = eye;
 
 		// 박스1 그리기 ---------------------------------------
-		//vmath::mat4 transM = vmath::translate(vmath::vec3((float)sin(currentTime * 0.5f), 0.0f, (float)cos(currentTime * 0.5f) * 0.7f));
 		vmath::mat4 transM = vmath::translate(vmath::vec3(0.0f, 0.0f, 0.0f));
 		float angle = currentTime * 100;
 		vmath::mat4 rotateM = vmath::rotate(angle, 0.0f, 1.0f, 0.0f);
-		float yellow_shininess = 32.f;
 
-		vmath::vec3 yellow_ambient(1.0f, 0.5f, 0.31f);
-		vmath::vec3 yellow_diffuse(1.0f, 0.5f, 0.31f);
-		vmath::vec3 yellow_specular(1.0f, 0.5f, 0.31f);
+		glUseProgram(shader_program_model);
 
+		glUniformMatrix4fv(glGetUniformLocation(shader_program_model, "projection"), 1, GL_FALSE, projM * transM);
+		glUniformMatrix4fv(glGetUniformLocation(shader_program_model, "view"), 1, GL_FALSE, lookAt);
+		
+		glUniform3fv(glGetUniformLocation(shader_program_model, "viewPos"), 1, viewPos);
+		
+		glUniform3f(glGetUniformLocation(shader_program_model, "dirLight.direction"), 0.0f, -1.0f, 0.0f);
+		glUniform3f(glGetUniformLocation(shader_program_model, "dirLight.ambient"), 0.05f, 0.05f, 0.05f);
+		glUniform3f(glGetUniformLocation(shader_program_model, "dirLight.diffuse"), 1.0f, 1.f, 1.f);
+		glUniform3f(glGetUniformLocation(shader_program_model, "dirLight.specular"), 0.5f, 0.5f, 0.5f);
 
-		glUseProgram(shader_programs[1]);
-		glUniform1f(glGetUniformLocation(shader_programs[1], "material.shininess"), yellow_shininess);
-		glUniform1i(glGetUniformLocation(shader_programs[1], "material.diffuse"), 1);
-		glActiveTexture(GL_TEXTURE1);
-		glBindTexture(GL_TEXTURE_2D, textures[1]);
+		glUniform1f(glGetUniformLocation(shader_program_model, "pointLights[0].c1"), 0.09f);
+		glUniform1f(glGetUniformLocation(shader_program_model, "pointLights[0].c2"), 0.032f);
+		glUniform3fv(glGetUniformLocation(shader_program_model, "pointLights[0].position"), 1, pointLightPos[0]);
+		glUniform3f(glGetUniformLocation(shader_program_model, "pointLights[0].ambient"), 0.2f, 0.f, 0.f);
+		glUniform3f(glGetUniformLocation(shader_program_model, "pointLights[0].diffuse"), 0.5f, 0.f, 0.f);
+		glUniform3fv(glGetUniformLocation(shader_program_model, "pointLights[0].specular"), 1, pointLightColors[0]);
 
-		glUniform1i(glGetUniformLocation(shader_programs[1], "material.specular"), 2);
-		glActiveTexture(GL_TEXTURE2);
-		glBindTexture(GL_TEXTURE_2D, textures[2]);
+		glUniform1f(glGetUniformLocation(shader_program_model, "pointLights[1].c1"), 0.09f);
+		glUniform1f(glGetUniformLocation(shader_program_model, "pointLights[1].c2"), 0.032f);
+		glUniform3fv(glGetUniformLocation(shader_program_model, "pointLights[1].position"), 1, pointLightPos[1]);
+		glUniform3f(glGetUniformLocation(shader_program_model, "pointLights[1].ambient"), 0.f, 0.2f, 0.f);
+		glUniform3f(glGetUniformLocation(shader_program_model, "pointLights[1].diffuse"), 0.f, 0.5f, 0.f);
+		glUniform3fv(glGetUniformLocation(shader_program_model, "pointLights[1].specular"), 1, pointLightColors[1]);
 
-		glUniform3f(glGetUniformLocation(shader_programs[1], "dirLight.direction"), 0.0f, -1.0f, 0.0f);
-		glUniform3f(glGetUniformLocation(shader_programs[1], "dirLight.ambient"), 0.05f, 0.05f, 0.05f);
-		glUniform3f(glGetUniformLocation(shader_programs[1], "dirLight.diffuse"), 0.4f, 0.4f, 0.4f);
-		glUniform3f(glGetUniformLocation(shader_programs[1], "dirLight.specular"), 0.5f, 0.5f, 0.5f);
+		glUniform1f(glGetUniformLocation(shader_program_model, "pointLights[2].c1"), 0.09f);
+		glUniform1f(glGetUniformLocation(shader_program_model, "pointLights[2].c2"), 0.032f);
+		glUniform3fv(glGetUniformLocation(shader_program_model, "pointLights[2].position"), 1, pointLightPos[2]);
+		glUniform3f(glGetUniformLocation(shader_program_model, "pointLights[2].ambient"), 0.f, 0.f, 0.2f);
+		glUniform3f(glGetUniformLocation(shader_program_model, "pointLights[2].diffuse"), 0.f, 0.f, 0.5f);
+		glUniform3fv(glGetUniformLocation(shader_program_model, "pointLights[2].specular"), 1, pointLightColors[2]);
 
-		glUniform1f(glGetUniformLocation(shader_programs[1], "pointLights[0].c1"), 0.09f);
-		glUniform1f(glGetUniformLocation(shader_programs[1], "pointLights[0].c2"), 0.032f);
-		glUniform3fv(glGetUniformLocation(shader_programs[1], "pointLights[0].position"), 1, pointLightPos[0]);
-		glUniform3f(glGetUniformLocation(shader_programs[1], "pointLights[0].ambient"), 0.2f, 0.f, 0.f);
-		glUniform3f(glGetUniformLocation(shader_programs[1], "pointLights[0].diffuse"), 0.5f, 0.f, 0.f);
-		glUniform3fv(glGetUniformLocation(shader_programs[1], "pointLights[0].specular"), 1, pointLightColors[0]);
+		
+		glUniform3fv(glGetUniformLocation(shader_program_model, "spotLight.position"), 1, eye);
+		glUniform3fv(glGetUniformLocation(shader_program_model, "spotLight.direction"), 1, center - eye);
+		glUniform1f(glGetUniformLocation(shader_program_model, "spotLight.cutOff"), (float)cos(vmath::radians(12.5)));
+		glUniform1f(glGetUniformLocation(shader_program_model, "spotLight.outerCutOff"), (float)cos(vmath::radians(15.5)));
+		glUniform1f(glGetUniformLocation(shader_program_model, "spotLight.c1"), 0.09f);
+		glUniform1f(glGetUniformLocation(shader_program_model, "spotLight.c2"), 0.032f);
+		glUniform3f(glGetUniformLocation(shader_program_model, "spotLight.ambient"), 0.0f, 0.0f, 0.0f);
+		glUniform3f(glGetUniformLocation(shader_program_model, "spotLight.diffuse"), 1.0f, 1.0f, 1.0f);
+		glUniform3f(glGetUniformLocation(shader_program_model, "spotLight.specular"), 1.0f, 1.0f, 1.0f);
+		
 
-		glUniform1f(glGetUniformLocation(shader_programs[1], "pointLights[1].c1"), 0.09f);
-		glUniform1f(glGetUniformLocation(shader_programs[1], "pointLights[1].c2"), 0.032f);
-		glUniform3fv(glGetUniformLocation(shader_programs[1], "pointLights[1].position"), 1, pointLightPos[1]);
-		glUniform3f(glGetUniformLocation(shader_programs[1], "pointLights[1].ambient"), 0.f, 0.2f, 0.f);
-		glUniform3f(glGetUniformLocation(shader_programs[1], "pointLights[1].diffuse"), 0.f, 0.5f, 0.f);
-		glUniform3fv(glGetUniformLocation(shader_programs[1], "pointLights[1].specular"), 1, pointLightColors[1]);
-
-
-		glUniform1f(glGetUniformLocation(shader_programs[1], "pointLights[2].c1"), 0.09f);
-		glUniform1f(glGetUniformLocation(shader_programs[1], "pointLights[2].c2"), 0.032f);
-		glUniform3fv(glGetUniformLocation(shader_programs[1], "pointLights[2].position"), 1, pointLightPos[2]);
-		glUniform3f(glGetUniformLocation(shader_programs[1], "pointLights[2].ambient"), 0.f, 0.f, 0.2f);
-		glUniform3f(glGetUniformLocation(shader_programs[1], "pointLights[2].diffuse"), 0.f, 0.f, 0.5f);
-		glUniform3fv(glGetUniformLocation(shader_programs[1], "pointLights[2].specular"), 1, pointLightColors[2]);
-
-		glUniform3fv(glGetUniformLocation(shader_programs[1], "spotLight.position"), 1, eye);
-		glUniform3fv(glGetUniformLocation(shader_programs[1], "spotLight.direction"), 1, center - eye);
-		glUniform1f(glGetUniformLocation(shader_programs[1], "spotLight.cutOff"), (float)cos(vmath::radians(12.5)));
-		glUniform1f(glGetUniformLocation(shader_programs[1], "spotLight.outerCutOff"), (float)cos(vmath::radians(15.5)));
-		glUniform1f(glGetUniformLocation(shader_programs[1], "spotLight.c1"), 0.09f);
-		glUniform1f(glGetUniformLocation(shader_programs[1], "spotLight.c2"), 0.032f);
-		glUniform3f(glGetUniformLocation(shader_programs[1], "spotLight.ambient"), 0.0f, 0.0f, 0.0f);
-		glUniform3f(glGetUniformLocation(shader_programs[1], "spotLight.diffuse"), 1.0f, 1.0f, 1.0f);
-		glUniform3f(glGetUniformLocation(shader_programs[1], "spotLight.specular"), 1.0f, 1.0f, 1.0f);
-
-
-		glUniformMatrix4fv(glGetUniformLocation(shader_programs[1], "projection"), 1, GL_FALSE, projM * transM);
-		glUniformMatrix4fv(glGetUniformLocation(shader_programs[1], "view"), 1, GL_FALSE, lookAt);
-		glUniformMatrix4fv(glGetUniformLocation(shader_programs[1], "model"), 1, GL_FALSE, rotateM);
-		glUniform3fv(glGetUniformLocation(shader_programs[1], "viewPos"), 1, viewPos);
-
-		glBindVertexArray(VAOs[1]);
-
+		
 		for (int i = 0; i < boxPositions.size(); i++)
 		{
 			float angle = 10.f * i * currentTime;
@@ -472,11 +452,9 @@ public:
 				vmath::rotate(angle, 0.0f, 0.3f, 1.0f) *
 				vmath::rotate(angle, 1.0f, 0.3f, 0.5f) *
 				vmath::scale(1.0f);
-			glUniformMatrix4fv(glGetUniformLocation(shader_programs[1], "model"), 1, GL_FALSE, model);
-			glDrawArrays(GL_TRIANGLES, 0, 36);
+			glUniformMatrix4fv(glGetUniformLocation(shader_program_model, "model"), 1, GL_FALSE, model);
+			boxModel.draw(shader_program_model);
 		}
-
-		glDrawArrays(GL_TRIANGLES, 0, 36);
 
 		
 
@@ -486,39 +464,34 @@ public:
 		vmath::mat4 transform = vmath::translate(pointLightPos[0]) *
 			vmath::rotate(angle, 0.0f, 1.0f, 0.0f) *
 			vmath::scale(scaleFactor, scaleFactor, scaleFactor);
-
-
 		
-		glUseProgram(shader_programs[2]);
+		pyramidModel.defaultColor= pointLightColors[0];
+		glUniformMatrix4fv(glGetUniformLocation(shader_program_model, "projection"), 1, GL_FALSE, projM);
+		glUniformMatrix4fv(glGetUniformLocation(shader_program_model, "view"), 1, GL_FALSE, lookAt);
+		glUniformMatrix4fv(glGetUniformLocation(shader_program_model, "model"), 1, GL_FALSE, transform);
 
-		glUniform3fv(glGetUniformLocation(shader_programs[2], "color"), 1, pointLightColors[0]);
-		glUniformMatrix4fv(glGetUniformLocation(shader_programs[2], "projection"), 1, GL_FALSE, projM);
-		glUniformMatrix4fv(glGetUniformLocation(shader_programs[2], "view"), 1, GL_FALSE, lookAt);
-		glUniformMatrix4fv(glGetUniformLocation(shader_programs[2], "model"), 1, GL_FALSE, transform);
+		pyramidModel.draw(shader_program_model);
 
-		glBindVertexArray(VAOs[2]);
-		glDrawElements(GL_TRIANGLES, 24, GL_UNSIGNED_INT, 0);
-
-
-		glUniform3fv(glGetUniformLocation(shader_programs[2], "color"), 1, pointLightColors[1]);
+		pyramidModel.defaultColor = pointLightColors[1];
 		transform = vmath::translate(pointLightPos[1]) *
 			vmath::rotate(angle , 0.0f, 1.0f, 0.0f) *
 			vmath::scale(scaleFactor, scaleFactor, scaleFactor);
 
 
-		glUniformMatrix4fv(glGetUniformLocation(shader_programs[2], "model"), 1, GL_FALSE, transform);
-		glDrawElements(GL_TRIANGLES, 24, GL_UNSIGNED_INT, 0);
+		glUniformMatrix4fv(glGetUniformLocation(shader_program_model, "model"), 1, GL_FALSE, transform);
+		pyramidModel.draw(shader_program_model);
 
-		glUniform3fv(glGetUniformLocation(shader_programs[2], "color"), 1, pointLightColors[2]);
+
+		pyramidModel.defaultColor = pointLightColors[2];
 		transform = vmath::translate(pointLightPos[2]) *
 			vmath::rotate(angle, 0.0f, 1.0f, 0.0f) *
 			vmath::scale(scaleFactor, scaleFactor, scaleFactor);
 
 
-		glUniformMatrix4fv(glGetUniformLocation(shader_programs[2], "model"), 1, GL_FALSE, transform);
-		glDrawElements(GL_TRIANGLES, 24, GL_UNSIGNED_INT, 0);
+		glUniformMatrix4fv(glGetUniformLocation(shader_program_model, "model"), 1, GL_FALSE, transform);
+		pyramidModel.draw(shader_program_model);
 
-		
+		/*
 		// 기본 Framebuffer로 되돌리기
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 		glDisable(GL_DEPTH_TEST);
@@ -532,14 +505,13 @@ public:
 		glClear(GL_COLOR_BUFFER_BIT);
 
 
-		// FBO Texture를 쉐이더 프로그램에 연결
-		glUseProgram(shader_programs[0]);
-		glUniformMatrix4fv(uniform_transform1, 1, GL_FALSE, projM * lookAt * rotateM * vmath::scale(1.3f) * vmath::translate(0.0f, -0.25f, 0.0f));
-		glUniform1i(glGetUniformLocation(shader_programs[0], "texture1"), 0);
+		// FBO Texture[0] 액티브
+		glUniformMatrix4fv(glGetUniformLocation(shader_program_model, "model"), 1, GL_FALSE, projM * lookAt * rotateM * vmath::scale(1.3f) * vmath::translate(0.0f, -0.25f, 0.0f));
+		glUniform1i(glGetUniformLocation(shader_program_model, "texture1"), 0);
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, FBO_texture[0]);
-		glBindVertexArray(VAOs[1]);
-		glDrawArrays(GL_TRIANGLES, 0, 36);
+		glUniform1i(glGetUniformLocation(shader_program_model, "useTexture1"), (int)FBO_texture[0]);
+		boxModel.draw(shader_program_model);
 		
 		
 		// 기본 Framebuffer로 되돌리기
@@ -550,21 +522,31 @@ public:
 		glClear(GL_COLOR_BUFFER_BIT);
 
 		// FBO Texture를 스크린 쉐이더 프로그램에 연결
-		glUseProgram(shader_programs[3]);
-		glUniform1i(glGetUniformLocation(shader_programs[3], "screenTexture"), 0);
+		glUseProgram(shader_program_pp);
+		glUniform1i(glGetUniformLocation(shader_program_pp, "screenTexture"), 0);
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, FBO_texture[1]);
-		glBindVertexArray(VAOs[3]);
+		glBindVertexArray(VAO);
 		glDrawArrays(GL_TRIANGLES, 0, 6);
 		
 		
-			
+			*/
 	}
 
+	void onResize(int w, int h)
+	{
+		sb7::application::onResize(w, h);
+		if (glViewport != NULL) glViewport(0, 0, info.windowWidth, info.windowHeight);
+	}
+
+
 private:
-	GLuint shader_programs[4];
-	GLuint VAOs[4], VBOs[4], EBOs[2], FBO[2], RBO;
-	GLuint textures[3], FBO_texture[2];
+	GLuint shader_program_model;
+	GLuint shader_program_pp;
+	//GLuint shader_basic_texture;
+	GLuint VAO, VBO, FBO[2], RBO;
+	GLuint FBO_texture[2];
+	Model boxModel, pyramidModel;
 
 	std::vector<vmath::vec3> boxPositions;
 };

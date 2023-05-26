@@ -138,6 +138,8 @@
     <None Include="basic_lighting_vs.glsl" />
     <None Include="basic_texturing_fs.glsl" />
     <None Include="basic_texturing_vs.glsl" />
+    <None Include="multiple_lights_fs.glsl" />
+    <None Include="multiple_lights_vs.glsl" />
     <None Include="shader_program_screen_fs.glsl" />
     <None Include="shader_program_screen_vs.glsl" />
     <None Include="simple_color_fs.glsl" />
