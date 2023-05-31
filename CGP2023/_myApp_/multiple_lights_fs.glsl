@@ -58,9 +58,6 @@ uniform PointLight pointLights[NUM_POINT_LIGHTS];
 uniform SpotLight spotLight;
 
 uniform int useNormal;
-uniform int useTexture1;
-uniform sampler2D texture1;
-
 
 out vec4 fragColor;
 
