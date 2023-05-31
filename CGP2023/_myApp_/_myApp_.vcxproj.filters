@@ -15,50 +15,23 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="stb_image.h">
-      <Filter>헤더 파일</Filter>
-    </ClInclude>
-    <ClInclude Include="model.h">
-      <Filter>헤더 파일</Filter>
-    </ClInclude>
-    <ClInclude Include="primitive.h">
-      <Filter>헤더 파일</Filter>
-    </ClInclude>
-  </ItemGroup>
-  <ItemGroup>
     <ClCompile Include="_myApp_.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <None Include="basic_lighting_fs.glsl">
-      <Filter>소스 파일</Filter>
-    </None>
-    <None Include="basic_lighting_vs.glsl">
-      <Filter>소스 파일</Filter>
-    </None>
-    <None Include="basic_texturing_fs.glsl">
-      <Filter>소스 파일</Filter>
-    </None>
-    <None Include="basic_texturing_vs.glsl">
-      <Filter>소스 파일</Filter>
-    </None>
-    <None Include="simple_color_fs.glsl">
-      <Filter>소스 파일</Filter>
-    </None>
-    <None Include="simple_color_vs.glsl">
-      <Filter>소스 파일</Filter>
-    </None>
-    <None Include="shader_program_screen_vs.glsl">
-      <Filter>소스 파일</Filter>
-    </None>
-    <None Include="shader_program_screen_fs.glsl">
+    <ClInclude Include="Model.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="stb_image.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="multiple_lights_fs.glsl">
       <Filter>소스 파일</Filter>
     </None>
     <None Include="multiple_lights_vs.glsl">
-      <Filter>소스 파일</Filter>
-    </None>
-    <None Include="multiple_lights_fs.glsl">
       <Filter>소스 파일</Filter>
     </None>
   </ItemGroup>
