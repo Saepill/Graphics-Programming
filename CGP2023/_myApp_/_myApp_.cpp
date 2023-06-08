@@ -51,14 +51,17 @@ public:
 
 
 		// 첫 번째 객체 정의 : OBJ 모델  --------------------------------------------------
-		objModel.init();
+		apple.init();
 		//objModel.setupMesh(36, box_positions, box_texCoords, box_normals);
 		//objModel.loadDiffuseMap("../../src/_myApp_/container2.png");
 		//objModel.loadSpecularMap("../../src/_myApp_/container2_specular.png");
 		//objModel.loadOBJ("../../src/_myApp_/suzanne.obj");
 		//objModel.defaultDiffuse = vmath::vec3(1.0f, 0.0f, 0.0f);
-		objModel.loadOBJ("low_green_apple.obj");
-		objModel.loadDiffuseMap("GREEN_baseColor.png");
+		apple.loadOBJ("model/low_green_apple.obj");
+		apple.loadDiffuseMap("GREEN_baseColor.png");
+
+		glass.init();
+		glass.loadOBJ("model/lowwineglass.obj");
 
 		// Green Apple Room ----------------------------------------------------------------
 		green_apple_floor.init(PLANE_TOP, 1.0f, 0.0f, 5.0f, 5.0f);
@@ -192,7 +195,8 @@ public:
 		vmath::mat4 model = vmath::translate(0.f, 3.25f, -1.f) *
 			vmath::scale(4.0f);
 		glUniformMatrix4fv(glGetUniformLocation(shader_program, "model"), 1, GL_FALSE, apple_room_translate * model);
-		objModel.draw(shader_program);
+		apple.draw(shader_program);
+
 
 		// BOTTOM
 		model = vmath::scale(10.0f);
@@ -222,7 +226,13 @@ public:
 		glUniformMatrix4fv(glGetUniformLocation(shader_program, "model"), 1, GL_FALSE, apple_room_translate * model);
 		green_apple_ceiling.draw(shader_program);
 
-
+		// Object Room -----------------------------------------------------------
+		// object
+		vmath::mat4 object_room_translate = vmath::translate(center[2], 0.f, 0.f);
+		model = vmath::translate(0.f, 0.0f, 0.f) *
+			vmath::scale(10.f);
+		glUniformMatrix4fv(glGetUniformLocation(shader_program, "model"), 1, GL_FALSE,object_room_translate* model);
+		glass.draw(shader_program);
 
 		// 피라미드 그리기 ---------------------------------------
 		for (int i = 0; i < 2; i++)
@@ -328,7 +338,7 @@ public:
 		mouseDown = false;
 		
 		center[0] = 0.0f; // 메인방
-		center[1] = 1000.f; // 사과방
+		center[1] = 10.f; // 사과방
 		center[2] = 0.0f; // 사물방
 		center[3] = 0.0f; // 착시방
 		//wheelPos = 0;
@@ -339,7 +349,9 @@ public:
 private:
 	GLuint shader_program;
 
-	Model objModel, pyramidModel;
+	Model pyramidModel;
+	Model apple;
+	Model glass;
 	vmath::vec3 objPosition;
 	Primitive green_apple_floor;
 	Primitive green_apple_wall;
