@@ -185,6 +185,7 @@ public:
 					// bottom
 					-width_unit, 0.0f, width_unit, 	tex_s, 0.0f,	0.0f, -1.0f, 0.0f,
 					width_unit, 0.0f, -width_unit,	0.0f, tex_t,	0.0f, -1.0f, 0.0f, 
+					width_unit, 0.0f, width_unit, 	tex_s, tex_t,	0.0f, -1.0f, 0.0f,
 
 					width_unit, 0.0f, -width_unit, 	0.0f, tex_t,	0.0f, -1.0f, 0.0f,
 					-width_unit, 0.0f, width_unit,	tex_s, 0.0,		0.0f, -1.0f, 0.0f,

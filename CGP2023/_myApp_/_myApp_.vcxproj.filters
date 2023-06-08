@@ -26,6 +26,12 @@
     <ClInclude Include="stb_image.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
+    <ClInclude Include="primitive.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="Camera.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="multiple_lights_fs.glsl">

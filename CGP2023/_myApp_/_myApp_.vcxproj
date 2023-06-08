@@ -130,7 +130,9 @@
     <ClCompile Include="_myApp_.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Camera.h" />
     <ClInclude Include="Model.h" />
+    <ClInclude Include="primitive.h" />
     <ClInclude Include="stb_image.h" />
   </ItemGroup>
   <ItemGroup>
