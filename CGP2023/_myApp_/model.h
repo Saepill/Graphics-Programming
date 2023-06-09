@@ -17,7 +17,7 @@ public:
 	std::vector<GLuint> vIndices;
 
 	GLuint diffuseMap, specularMap;
-	float shininess;
+	float shininess, alpha;
 	vmath::vec3 defaultAmbient, defaultDiffuse, defaultSpecular;
 
 private:
@@ -30,6 +30,7 @@ public:
 	// »ý¼ºÀÚ
 	Model() {
 		shininess = 32.f;
+		alpha = 1.0f;
 		useDiffuseMap = false;
 		useSpecularMap = false;
 
@@ -134,6 +135,7 @@ public:
 
 		glUniform1i(glGetUniformLocation(_shaderID, "useNormal"), (int)vNormals.size());
 		glUniform1f(glGetUniformLocation(_shaderID, "material.shininess"), shininess);
+		glUniform1f(glGetUniformLocation(_shaderID, "material.alpha"), alpha);
 
 		if(useDiffuseMap) {
 			glUniform1i(glGetUniformLocation(_shaderID, "material.diffuse"), 0);

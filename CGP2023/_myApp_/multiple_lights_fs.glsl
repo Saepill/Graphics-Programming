@@ -8,6 +8,7 @@ struct Material {
     sampler2D diffuse; 
     sampler2D specular; 
     float shininess; 
+    float alpha;
 
 	vec3 defaultAmbient;
 	vec3 defaultDiffuse;
@@ -103,10 +104,10 @@ void main()
 		// phase 3: spot light
 		result += CalcSpotLight(spotLight, norm, vsPos, viewDir);    
     
-		fragColor = vec4(result, 1.0);
+		fragColor = vec4(result, material.alpha);
 	}
-	else
-		fragColor = vec4(material.defaultDiffuse, 1.0);
+    else
+        fragColor = vec4(material.defaultDiffuse, material.alpha);
 } 
 
 // directional light

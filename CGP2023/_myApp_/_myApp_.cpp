@@ -61,10 +61,15 @@ public:
 		apple.loadDiffuseMap("GREEN_baseColor.png");
 
 		glass.init();
-		glass.loadOBJ("model/lowwineglass.obj");
+		//glass.loadOBJ("model/lowwineglass.obj");
+		glass.loadOBJ("model/glass2_removevertices.obj");
+		glass.loadDiffuseMap("glass_basecolor.png");
+		glass.alpha = 0.8f;
+		
 		
 		comb.init();
 		comb.loadOBJ("model/comb.obj");
+		comb.loadDiffuseMap("comb_basecolor.png");
 
 		bedding.init();
 		bedding.loadOBJ("model/Bedding.obj");
@@ -82,9 +87,10 @@ public:
 		brush.init();
 		brush.loadOBJ("model/brush.obj");
 		brush.loadDiffuseMap("brush.png");
-
+	
 		soap.init();
 		soap.loadOBJ("model/soap.obj");
+		soap.loadDiffuseMap("soap_basecolor.png");
 
 		match.init();
 		match.loadOBJ("model/match.obj");
@@ -176,7 +182,8 @@ public:
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		glEnable(GL_DEPTH_TEST);
 		glEnable(GL_CULL_FACE);
-
+		glEnable(GL_BLEND);
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
 		// 카메라 매트릭스 계산 -------------------------------------------------------------
 		//float distance = 5.f;
@@ -273,12 +280,8 @@ public:
 
 		// Object Room -----------------------------------------------------------
 		// object
-		vmath::mat4 object_room_translate = vmath::translate(center[2], 0.f, 0.f);
-		model = vmath::translate(0.4f, -0.3f, 1.2f) *
-			vmath::scale(8.f);
-		glUniformMatrix4fv(glGetUniformLocation(shader_program, "model"), 1, GL_FALSE,object_room_translate* model);
-		glass.draw(shader_program);
 
+		vmath::mat4 object_room_translate = vmath::translate(center[2], 0.f, 0.f);
 		model = vmath::translate(-1.2f, 1.6f, -4.5f) *
 			vmath::rotate(90.f,0.0f,115.0f) *
 			vmath::scale(0.06f);
@@ -360,6 +363,11 @@ public:
 			vmath::scale(10.0f);
 		glUniformMatrix4fv(glGetUniformLocation(shader_program, "model"), 1, GL_FALSE, object_room_translate* model);
 		object_ceiling.draw(shader_program);
+
+		model = vmath::translate(0.4f, 1.75f, 1.2f) *
+			vmath::scale(0.4f);
+		glUniformMatrix4fv(glGetUniformLocation(shader_program, "model"), 1, GL_FALSE, object_room_translate* model);
+		glass.draw(shader_program);
 
 		// 피라미드 그리기 ---------------------------------------
 		for (int i = 0; i < 2; i++)
