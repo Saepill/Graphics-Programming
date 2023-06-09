@@ -62,14 +62,58 @@ public:
 
 		glass.init();
 		glass.loadOBJ("model/lowwineglass.obj");
+		
+		comb.init();
+		comb.loadOBJ("model/comb.obj");
 
-		// Green Apple Room ----------------------------------------------------------------
+		bedding.init();
+		bedding.loadOBJ("model/Bedding.obj");
+		bedding.loadDiffuseMap("Bedding.png");
+
+		bedframe.init();
+		bedframe.loadOBJ("model/Bedframe.obj");
+		bedframe.loadDiffuseMap("Bedframe.png");
+
+		closet.init();
+		closet.loadOBJ("model/closet.obj");
+		closet.loadDiffuseMap("closet_texture.jpg");
+		closet.loadSpecularMap("closet_specular.jpg");
+
+		brush.init();
+		brush.loadOBJ("model/brush.obj");
+		brush.loadDiffuseMap("brush.png");
+
+		soap.init();
+		soap.loadOBJ("model/soap.obj");
+
+		match.init();
+		match.loadOBJ("model/match.obj");
+		match.loadDiffuseMap("match.jpg");
+
+		carpet[0].init();
+		carpet[0].loadOBJ("model/carpet.obj");
+		carpet[0].loadDiffuseMap("carpet_basecolor.png");
+
+		carpet[1].init();
+		carpet[1].loadOBJ("model/carpet.obj");
+		carpet[1].loadDiffuseMap("carpet2_basecolor.png");
+
+		// Green Apple Room Box ----------------------------------------------------------------
 		green_apple_floor.init(PLANE_TOP, 1.0f, 0.0f, 5.0f, 5.0f);
 		green_apple_floor.loadDiffuseMap("woodtexture.png");
 		green_apple_wall.init(PLANE_FRONT, 1.0f, 0.8f, 3.0f, 3.0f);
 		green_apple_wall.loadDiffuseMap("pink_wall.png");
 		green_apple_ceiling.init(PLANE_BOTTOM, 1.0f, 1.0f, 5.0f, 5.0f);
 		green_apple_ceiling.loadDiffuseMap("ivory_ceiling.png");
+
+
+		// Object Room Box
+		object_floor.init(PLANE_TOP, 1.0f, 0.0f, 10.0f, 10.0f);
+		object_floor.loadDiffuseMap("woodtexture2.png");
+		object_wall.init(PLANE_FRONT, 1.0f, 0.8f, 1.0f, 1.0f);
+		object_wall.loadDiffuseMap("clouds.jpg");
+		object_ceiling.init(PLANE_BOTTOM, 1.0f, 1.0f, 5.0f, 5.0f);
+		object_ceiling.loadDiffuseMap("ivory_ceiling.png");
 
 
 		// 세 번째 객체 정의 : 피라미드 --------------------------------------------------
@@ -153,6 +197,7 @@ public:
 		vmath::vec3 lightColor(1.0f, 1.0f, 1.0f);
 		vmath::vec3 viewPos = camera.eye;
 
+
 		// 모델 그리기 ---------------------------------------
 		glUseProgram(shader_program);
 
@@ -229,10 +274,92 @@ public:
 		// Object Room -----------------------------------------------------------
 		// object
 		vmath::mat4 object_room_translate = vmath::translate(center[2], 0.f, 0.f);
-		model = vmath::translate(0.f, 0.0f, 0.f) *
-			vmath::scale(10.f);
+		model = vmath::translate(0.4f, -0.3f, 1.2f) *
+			vmath::scale(8.f);
 		glUniformMatrix4fv(glGetUniformLocation(shader_program, "model"), 1, GL_FALSE,object_room_translate* model);
 		glass.draw(shader_program);
+
+		model = vmath::translate(-1.2f, 1.6f, -4.5f) *
+			vmath::rotate(90.f,0.0f,115.0f) *
+			vmath::scale(0.06f);
+		glUniformMatrix4fv(glGetUniformLocation(shader_program, "model"), 1, GL_FALSE, object_room_translate* model);
+		comb.draw(shader_program);
+		
+		model = vmath::translate(-2.8f, 0.5f, -4.f) *
+			vmath::rotate(0.f, 90.0f, 0.f) *
+			vmath::scale(1.f);
+		glUniformMatrix4fv(glGetUniformLocation(shader_program, "model"), 1, GL_FALSE, object_room_translate* model);
+		bedframe.draw(shader_program);
+
+		model = vmath::translate(-2.8f, 0.5f, -4.f) *
+			vmath::rotate(0.f, 90.f, 0.f) *
+			vmath::scale(1.f);
+		glUniformMatrix4fv(glGetUniformLocation(shader_program, "model"), 1, GL_FALSE, object_room_translate* model);
+		bedding.draw(shader_program);
+
+		model = vmath::translate(3.f, 0.0f, -4.3f) *
+			vmath::rotate(0.f, -90.f, 0.f) *
+			vmath::scale(15.f);
+		glUniformMatrix4fv(glGetUniformLocation(shader_program, "model"), 1, GL_FALSE, object_room_translate* model);
+		closet.draw(shader_program);
+
+		model = vmath::translate(2.6f, 5.4f, -4.f) *
+			vmath::rotate(0.f, 25.f, 5.f) *
+			vmath::scale(15.f);
+		glUniformMatrix4fv(glGetUniformLocation(shader_program, "model"), 1, GL_FALSE, object_room_translate* model);
+		brush.draw(shader_program);
+
+		model = vmath::translate(3.f, 0.45f, -0.2f) *
+			vmath::rotate(0.f, 45.f, 0.f) *
+			vmath::scale(0.4f);
+		glUniformMatrix4fv(glGetUniformLocation(shader_program, "model"), 1, GL_FALSE, object_room_translate* model);
+		soap.draw(shader_program);
+
+		model = vmath::translate(-2.f, 0.1f, 1.f) *
+			vmath::rotate(0.f, 0.f, -89.f) *
+			vmath::scale(100.f);
+		glUniformMatrix4fv(glGetUniformLocation(shader_program, "model"), 1, GL_FALSE, object_room_translate* model);
+		match.draw(shader_program);
+
+		model = vmath::translate(1.5f, 0.0f, -0.7f) *
+			vmath::rotate(0.f, 100.f, 0.f) *
+			vmath::scale(2.6f);
+		glUniformMatrix4fv(glGetUniformLocation(shader_program, "model"), 1, GL_FALSE, object_room_translate* model);
+		carpet[0].draw(shader_program);
+
+		model = vmath::translate(-2.4f, 0.01f, 0.7f) *
+			vmath::rotate(0.f, 80.f, 0.f) *
+			vmath::scale(2.f);
+		glUniformMatrix4fv(glGetUniformLocation(shader_program, "model"), 1, GL_FALSE, object_room_translate* model);
+		carpet[1].draw(shader_program);
+
+		// BOTTOM
+		model = vmath::scale(10.0f);
+		glUniformMatrix4fv(glGetUniformLocation(shader_program, "model"), 1, GL_FALSE, object_room_translate* model);
+		object_floor.draw(shader_program);
+
+		// BACK
+		model = vmath::translate(0.f, 0.f, -10.f) *
+			vmath::scale(10.0f);
+		glUniformMatrix4fv(glGetUniformLocation(shader_program, "model"), 1, GL_FALSE, object_room_translate* model);
+		object_wall.draw(shader_program);
+		// LEFT
+		model = vmath::translate(-10.f, 0.f, 0.f) *
+			vmath::rotate(0.0f, 90.f, 0.0f) *
+			vmath::scale(10.0f);
+		glUniformMatrix4fv(glGetUniformLocation(shader_program, "model"), 1, GL_FALSE, object_room_translate* model);
+		object_wall.draw(shader_program);
+		// Right
+		model = vmath::translate(10.f, 0.f, 0.f) *
+			vmath::rotate(0.0f, -90.f, 0.0f) *
+			vmath::scale(10.0f);
+		glUniformMatrix4fv(glGetUniformLocation(shader_program, "model"), 1, GL_FALSE, object_room_translate* model);
+		object_wall.draw(shader_program);
+		// TOP
+		model = vmath::translate(0.f, 8.0f, 0.f) *
+			vmath::scale(10.0f);
+		glUniformMatrix4fv(glGetUniformLocation(shader_program, "model"), 1, GL_FALSE, object_room_translate* model);
+		object_ceiling.draw(shader_program);
 
 		// 피라미드 그리기 ---------------------------------------
 		for (int i = 0; i < 2; i++)
@@ -351,11 +478,10 @@ private:
 
 	Model pyramidModel;
 	Model apple;
-	Model glass;
+	Model glass, comb, bedding, bedframe, closet, brush, soap, match, carpet[2];
 	vmath::vec3 objPosition;
-	Primitive green_apple_floor;
-	Primitive green_apple_wall;
-	Primitive green_apple_ceiling;
+	Primitive green_apple_floor, green_apple_wall, green_apple_ceiling;
+	Primitive object_floor, object_wall, object_ceiling;
 		
 	float fov;
 	float objYangle;
