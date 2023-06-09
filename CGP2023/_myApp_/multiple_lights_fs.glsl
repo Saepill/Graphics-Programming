@@ -9,6 +9,7 @@ struct Material {
     sampler2D specular; 
     float shininess; 
     float alpha;
+    float diffuse_control;
 
 	vec3 defaultAmbient;
 	vec3 defaultDiffuse;
@@ -85,8 +86,8 @@ void main()
 
 		if(material.useDiffuseMap != 0)
 		{
-			matAmbientColor = vec3(texture(material.diffuse, vsTexCoord));
-			matDiffuseColor = vec3(texture(material.diffuse, vsTexCoord));
+			matAmbientColor = vec3(texture(material.diffuse, vsTexCoord)) * material.diffuse_control;
+			matDiffuseColor = vec3(texture(material.diffuse, vsTexCoord)) * material.diffuse_control;
 		}
 
 		if(material.useSpecularMap != 0)

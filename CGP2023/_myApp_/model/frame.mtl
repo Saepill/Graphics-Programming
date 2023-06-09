@@ -1,0 +1,14 @@
+# Blender 3.5.1 MTL File: 'None'
+# www.blender.org
+
+newmtl Victorian_Paintings
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+map_Kd C:/Users/mtcol/Documents/3D Models/Victorian Paintings/Textures/Single Painting/PBR Textures/Victorian Paintings_BaseColor_Utility - sRGB - Texture.png
+map_Ns C:/Users/mtcol/Documents/3D Models/Victorian Paintings/Textures/Single Painting/PBR Textures/Victorian Paintings_Roughness_Utility - Raw.png
+map_refl C:/Users/mtcol/Documents/3D Models/Victorian Paintings/Textures/Single Painting/PBR Textures/Victorian Paintings_Metallic_Utility - Raw.png
+map_Bump -bm 1.000000 C:/Users/mtcol/Documents/3D Models/Victorian Paintings/Textures/Single Painting/PBR Textures/Victorian Paintings_Normal_Utility - Raw.png

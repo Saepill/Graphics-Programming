@@ -51,20 +51,36 @@ public:
 
 
 		// 첫 번째 객체 정의 : OBJ 모델  --------------------------------------------------
+		frame_objectroom.init();
+		frame_objectroom.loadOBJ("model/frame.obj");
+		frame_objectroom.loadDiffuseMap("frame_objectroom.png");
+		frame_objectroom.loadSpecularMap("frame_specular.png");
+		frame_objectroom.diffuse_control = 0.7f;
+
+		frame_appleroom.init();
+		frame_appleroom.loadOBJ("model/frame.obj");
+		frame_appleroom.loadDiffuseMap("frame_appleroom.png");
+		frame_appleroom.loadSpecularMap("frame_specular.png");
+		frame_appleroom.diffuse_control = 0.7f;
+
+		frame_piperoom.init();
+		frame_piperoom.loadOBJ("model/frame.obj");
+		frame_piperoom.loadDiffuseMap("frame_piperoom.png");
+		frame_piperoom.loadSpecularMap("frame_specular.png");
+		frame_piperoom.diffuse_control = 0.3f;
+		
+		
 		apple.init();
-		//objModel.setupMesh(36, box_positions, box_texCoords, box_normals);
-		//objModel.loadDiffuseMap("../../src/_myApp_/container2.png");
-		//objModel.loadSpecularMap("../../src/_myApp_/container2_specular.png");
-		//objModel.loadOBJ("../../src/_myApp_/suzanne.obj");
-		//objModel.defaultDiffuse = vmath::vec3(1.0f, 0.0f, 0.0f);
 		apple.loadOBJ("model/low_green_apple.obj");
 		apple.loadDiffuseMap("GREEN_baseColor.png");
+		apple.diffuse_control = 1.5f;
 
 		glass.init();
 		//glass.loadOBJ("model/lowwineglass.obj");
 		glass.loadOBJ("model/glass2_removevertices.obj");
 		glass.loadDiffuseMap("glass_basecolor.png");
 		glass.alpha = 0.8f;
+		glass.shininess = 80.f;
 		
 		
 		comb.init();
@@ -104,6 +120,15 @@ public:
 		carpet[1].loadOBJ("model/carpet.obj");
 		carpet[1].loadDiffuseMap("carpet2_basecolor.png");
 
+		// Main Room Box ------------------------------------------------------------------------
+		main_floor.init(PLANE_TOP, 1.0f, 0.0f, 5.0f, 5.0f);
+		main_floor.defaultAmbient = vmath::vec3(0.1f, 0.1f, 0.1f);
+		main_wall.init(PLANE_FRONT, 1.0f, 0.8f, 3.0f, 3.0f);
+		main_wall.defaultAmbient = vmath::vec3(0.1f, 0.1f, 0.1f);
+		main_ceiling.init(PLANE_BOTTOM, 1.0f, 1.0f, 5.0f, 5.0f);
+		main_ceiling.defaultAmbient = vmath::vec3(0.1f, 0.1f, 0.1f);
+	
+
 		// Green Apple Room Box ----------------------------------------------------------------
 		green_apple_floor.init(PLANE_TOP, 1.0f, 0.0f, 5.0f, 5.0f);
 		green_apple_floor.loadDiffuseMap("woodtexture.png");
@@ -113,7 +138,7 @@ public:
 		green_apple_ceiling.loadDiffuseMap("ivory_ceiling.png");
 
 
-		// Object Room Box
+		// Object Room Box ------------------------------------------------------------------------
 		object_floor.init(PLANE_TOP, 1.0f, 0.0f, 10.0f, 10.0f);
 		object_floor.loadDiffuseMap("woodtexture2.png");
 		object_wall.init(PLANE_FRONT, 1.0f, 0.8f, 1.0f, 1.0f);
@@ -213,7 +238,7 @@ public:
 
 		glUniform3fv(glGetUniformLocation(shader_program, "viewPos"), 1, viewPos);
 
-		glUniform3f(glGetUniformLocation(shader_program, "dirLight.direction"), 1.0f, 1.0f, 0.0f);
+		glUniform3f(glGetUniformLocation(shader_program, "dirLight.direction"), 0.0f, 0.0f, -1.0f);
 		glUniform3f(glGetUniformLocation(shader_program, "dirLight.ambient"), 0.3f, 0.3f, 0.3f);
 		glUniform3f(glGetUniformLocation(shader_program, "dirLight.diffuse"), 0.4f, 0.4f, 0.4f);
 		glUniform3f(glGetUniformLocation(shader_program, "dirLight.specular"), 0.5f, 0.5f, 0.5f);
@@ -241,10 +266,69 @@ public:
 		//glUniform3f(glGetUniformLocation(shader_program, "spotLight.diffuse"), 1.0f, 1.0f, 1.0f);
 		//glUniform3f(glGetUniformLocation(shader_program, "spotLight.specular"), 1.0f, 1.0f, 1.0f);
 
+
+
+
+
+		// Main Room -------------------------------------------------------------------
+		vmath::mat4 main_room_translate = vmath::translate(center[0], 0.f, 0.f);
+
+		// frame
+		vmath::mat4 model = vmath::translate(-5.0f, 4.25f, 0.f) *
+			vmath::rotate(0.f, -90.f, 0.f) *
+			vmath::scale(3.0f);
+		glUniformMatrix4fv(glGetUniformLocation(shader_program, "model"), 1, GL_FALSE, main_room_translate * model);
+		frame_appleroom.draw(shader_program);
+
+		model = vmath::translate(5.0f, 4.25f, 0.f) *
+			vmath::rotate(0.f, 90.f, 0.f) *
+			vmath::scale(3.0f);
+		glUniformMatrix4fv(glGetUniformLocation(shader_program, "model"), 1, GL_FALSE, main_room_translate * model);
+		frame_objectroom.draw(shader_program);
+
+		model = vmath::translate(0.0f, 4.25f, -5.f) *
+			vmath::rotate(0.f, 180.f, 0.f) *
+			vmath::scale(3.0f);
+		glUniformMatrix4fv(glGetUniformLocation(shader_program, "model"), 1, GL_FALSE, main_room_translate * model);
+		frame_piperoom.draw(shader_program);
+
+		// BOTTOM
+		model = vmath::scale(10.0f);
+		glUniformMatrix4fv(glGetUniformLocation(shader_program, "model"), 1, GL_FALSE, main_room_translate * model);
+		main_floor.draw(shader_program);										   
+																					   
+		// BACK																		   
+		model = vmath::translate(0.f, 0.f, -10.f) *									   
+			vmath::scale(10.0f);													   
+		glUniformMatrix4fv(glGetUniformLocation(shader_program, "model"), 1, GL_FALSE, main_room_translate * model);
+		main_wall.draw(shader_program);										   
+		// LEFT																		   
+		model = vmath::translate(-10.f, 0.f, 0.f) *									   
+			vmath::rotate(0.0f, 90.f, 0.0f) *										   
+			vmath::scale(10.0f);													   
+		glUniformMatrix4fv(glGetUniformLocation(shader_program, "model"), 1, GL_FALSE, main_room_translate * model);
+		main_wall.draw(shader_program);										   
+		// Right																	   
+		model = vmath::translate(10.f, 0.f, 0.f) *									   
+			vmath::rotate(0.0f, -90.f, 0.0f) *										   
+			vmath::scale(10.0f);													   
+		glUniformMatrix4fv(glGetUniformLocation(shader_program, "model"), 1, GL_FALSE, main_room_translate * model);
+		main_wall.draw(shader_program);										   
+		// TOP																		   
+		model = vmath::translate(0.f, 8.0f, 0.f) *									   
+			vmath::scale(10.0f);													   
+		glUniformMatrix4fv(glGetUniformLocation(shader_program, "model"), 1, GL_FALSE, main_room_translate * model);
+		main_ceiling.draw(shader_program);
+
+
+
+
+
 		// Green Apple Room -----------------------------------------------------------
-		// green apple
 		vmath::mat4 apple_room_translate = vmath::translate(center[1], 0.f, 0.f);
-		vmath::mat4 model = vmath::translate(0.f, 3.25f, -1.f) *
+
+		// green apple
+		model = vmath::translate(0.f, 3.25f, -1.f) *
 			vmath::scale(4.0f);
 		glUniformMatrix4fv(glGetUniformLocation(shader_program, "model"), 1, GL_FALSE, apple_room_translate * model);
 		apple.draw(shader_program);
@@ -278,10 +362,15 @@ public:
 		glUniformMatrix4fv(glGetUniformLocation(shader_program, "model"), 1, GL_FALSE, apple_room_translate * model);
 		green_apple_ceiling.draw(shader_program);
 
-		// Object Room -----------------------------------------------------------
-		// object
 
+
+
+
+
+		// Object Room -----------------------------------------------------------
 		vmath::mat4 object_room_translate = vmath::translate(center[2], 0.f, 0.f);
+
+		// object
 		model = vmath::translate(-1.2f, 1.6f, -4.5f) *
 			vmath::rotate(90.f,0.0f,115.0f) *
 			vmath::scale(0.06f);
@@ -368,6 +457,11 @@ public:
 			vmath::scale(0.4f);
 		glUniformMatrix4fv(glGetUniformLocation(shader_program, "model"), 1, GL_FALSE, object_room_translate* model);
 		glass.draw(shader_program);
+
+
+
+
+
 
 		// 피라미드 그리기 ---------------------------------------
 		for (int i = 0; i < 2; i++)
@@ -474,7 +568,7 @@ public:
 		
 		center[0] = 0.0f; // 메인방
 		center[1] = 10.f; // 사과방
-		center[2] = 0.0f; // 사물방
+		center[2] = 20.0f; // 사물방
 		center[3] = 0.0f; // 착시방
 		//wheelPos = 0;
 
@@ -485,9 +579,12 @@ private:
 	GLuint shader_program;
 
 	Model pyramidModel;
+	Model frame_objectroom, frame_appleroom, frame_piperoom;
 	Model apple;
 	Model glass, comb, bedding, bedframe, closet, brush, soap, match, carpet[2];
 	vmath::vec3 objPosition;
+
+	Primitive main_floor, main_wall, main_ceiling;
 	Primitive green_apple_floor, green_apple_wall, green_apple_ceiling;
 	Primitive object_floor, object_wall, object_ceiling;
 		
