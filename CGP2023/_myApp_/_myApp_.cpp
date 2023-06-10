@@ -48,9 +48,31 @@ public:
 		shader_program = compile_shader();
 
 		stbi_set_flip_vertically_on_load(true);
+		
+		/*
+		// 프레임버퍼
+		glGenFramebuffers(1, &FBO);
+		glBindFramebuffer(GL_FRAMEBUFFER, FBO);
 
+		//color buffer 텍스처 생성 및 연결
+		glGenTextures(1, &FBO_texture);
+		glBindTexture(GL_TEXTURE_2D, FBO_texture);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, info.windowWidth, info.windowHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, FBO_texture, 0);
+
+		if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+			glfwTerminate();
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		*/
 
 		// 첫 번째 객체 정의 : OBJ 모델  --------------------------------------------------
+		apartment.init();
+		apartment.loadOBJ("model/apartment.obj");
+		apartment.loadDiffuseMap("apartment_basecolor.png");
+		apartment.loadSpecularMap("apartment_metallic.png");
+
 		frame_objectroom.init();
 		frame_objectroom.loadOBJ("model/frame.obj");
 		frame_objectroom.loadDiffuseMap("frame_objectroom.png");
@@ -202,7 +224,10 @@ public:
 		animationTime += currentTime - previousTime;
 		previousTime = currentTime;
 
-		//const GLfloat color[] = { (float)sin(currentTime) * 0.5f + 0.5f, (float)cos(currentTime) * 0.5f + 0.5f, 0.0f, 1.0f };
+
+		// FBO 바인딩
+		//glBindFramebuffer(GL_FRAMEBUFFER, FBO);
+
 		const GLfloat black[] = { 0.0f, 0.0f, 0.0f, 1.0f };
 		glClearBufferfv(GL_COLOR, 0, black);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -211,26 +236,40 @@ public:
 		glEnable(GL_BLEND);
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
+		/*
+		// Do 1st Rendering (겨울비 씬) ------------------------------------------
+
+
+		// 기본 Framebuffer로 되돌리기
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		glDisable(GL_DEPTH_TEST);
+
+
+		// 버퍼들의 값 지우기
+		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+		glClear(GL_COLOR_BUFFER_BIT);
+
+		glUseProgram(shader_program);
+
+		// FBO Texture를 쉐이더 프로그램에 연결
+		glUniform1i(glGetUniformLocation(shader_program, "material.diffuse"), 0);
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, FBO_texture);
+
+		*/
+
+
 		// 카메라 매트릭스 계산 -------------------------------------------------------------
-		//float distance = 5.f;
-		//vmath::vec3 eye((float)cos(animationTime*0.3f)*distance, 1.0, (float)sin(animationTime*0.3f)*distance);
-		//vmath::vec3 eye(0.0f, 1.0f, distance);
-		//vmath::vec3 center(0.0, 0.0, 0.0);
-		//vmath::vec3 up(0.0, 1.0, 0.0);
-		//vmath::mat4 lookAt = vmath::lookat(eye, center, up);
-		//vmath::mat4 projM = vmath::perspective(fov, (float)info.windowWidth / (float)info.windowHeight, 0.1f, 1000.0f);
 		vmath::mat4 lookAt = camera.lookat();
 		vmath::mat4 projM = camera.perspective(info.windowWidth, info.windowHeight, 0.1f, 1000.0f);
 
 		// 라이팅 설정 ---------------------------------------
 		float r = 2.f;
-		//vmath::vec3 pointLightPos[] = { vmath::vec3((float)sin(animationTime * 0.5f) * r, 0.0f, (float)cos(animationTime * 0.5f) * r),
-		//	vmath::vec3(0.0f, (float)sin(animationTime * 1.f) * r, (float)cos(animationTime * 1.f) * r) };
 		vmath::vec3 pointLightPos[] = { vmath::vec3(0.0f,4.0f,4.0f), vmath::vec3(0.0f,8.0f,0.0f) };
 		vmath::vec3 lightColor(1.0f, 1.0f, 1.0f);
 		vmath::vec3 viewPos = camera.eye;
 
-		// 카메라 위치 정보
+		// 액자와 인터랙션 범위 설정
 
 		if (( - 10.f <= camera.eye[0] && camera.eye[0] < -4.f) && ( -2.f <= camera.eye[2] && camera.eye[2] < 2.f))
 			appleRoom = true;
@@ -270,8 +309,6 @@ public:
 
 		
 
-
-
 		/*
 		glUniform3fv(glGetUniformLocation(shader_program, "spotLight.position"), 1, camera.eye);
 		glUniform3fv(glGetUniformLocation(shader_program, "spotLight.direction"), 1, camera.center - camera.eye);
@@ -284,9 +321,14 @@ public:
 		glUniform3f(glGetUniformLocation(shader_program, "spotLight.specular"), 1.0f, 1.0f, 1.0f);
 		*/
 
-
-
-
+		// DO 2nd Rendering
+		/*
+		vmath::mat4 model = vmath::translate(0.0f, 0.0f, 0.f) *
+			vmath::rotate(0.f, 0.f, 0.f) *
+			vmath::scale(1.0f);
+		glUniformMatrix4fv(glGetUniformLocation(shader_program, "model"), 1, GL_FALSE, model);
+		apartment.draw(shader_program);
+		*/
 		// Main Room -------------------------------------------------------------------
 		vmath::mat4 main_room_translate = vmath::translate(center[0], 0.f, 0.f);
 
@@ -632,8 +674,11 @@ public:
 
 private:
 	GLuint shader_program;
+	GLuint FBO;
+	GLuint FBO_texture;
 
 	Model pyramidModel;
+	Model apartment;
 	Model frame_objectroom, frame_appleroom, frame_piperoom;
 	Model apple;
 	Model glass, comb, bedding, bedframe, closet, brush, soap, match, carpet[2];
