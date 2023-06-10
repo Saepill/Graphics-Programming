@@ -49,7 +49,7 @@ public:
 
 		stbi_set_flip_vertically_on_load(true);
 		
-		/*
+		
 		// 프레임버퍼
 		glGenFramebuffers(1, &FBO);
 		glBindFramebuffer(GL_FRAMEBUFFER, FBO);
@@ -62,10 +62,11 @@ public:
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, FBO_texture, 0);
 
+		// 잘 연결되었는지 확인
 		if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
 			glfwTerminate();
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
-		*/
+		
 
 		// 첫 번째 객체 정의 : OBJ 모델  --------------------------------------------------
 		apartment.init();
@@ -98,7 +99,6 @@ public:
 		apple.diffuse_control = 1.5f;
 
 		glass.init();
-		//glass.loadOBJ("model/lowwineglass.obj");
 		glass.loadOBJ("model/glass2_removevertices.obj");
 		glass.loadDiffuseMap("glass_basecolor.png");
 		glass.alpha = 0.8f;
@@ -141,6 +141,9 @@ public:
 		carpet[1].init();
 		carpet[1].loadOBJ("model/carpet.obj");
 		carpet[1].loadDiffuseMap("carpet2_basecolor.png");
+
+		// 겨울비
+		winter_rain.init(PLANE_FRONT, 1.5f, 1.2f, 1.0f, 1.0f);
 
 		// Main Room Box ------------------------------------------------------------------------
 		main_floor.init(PLANE_TOP, 1.5f, 0.0f, 5.0f, 5.0f);
@@ -200,10 +203,15 @@ public:
 		glEnable(GL_MULTISAMPLE);
 
 		// Camera setup ------------------------------------------------------
-		camera.eye = vmath::vec3(0.0f, 5.25f, 0.f);
-		camera.center = vmath::vec3(0.0f, 6.25, -5.0f);
-		camera.up = vmath::vec3(0.0, 1.0f, 0.0);
-		camera.fov = 50.f;
+		camera[0].eye = vmath::vec3(0.0f, 5.25f, 0.f);
+		camera[0].center = vmath::vec3(0.0f, 6.25, -5.0f);
+		camera[0].up = vmath::vec3(0.0, 1.0f, 0.0);
+		camera[0].fov = 50.f;
+
+		camera[4].eye = vmath::vec3(0.0f, 5.25f, 0.f);
+		camera[4].center = vmath::vec3(0.0f, 6.25, -5.0f);
+		camera[4].up = vmath::vec3(0.0, 1.0f, 0.0);
+		camera[4].fov = 50.f;
 	}
 
 	// 애플리케이션 끝날 때 호출된다.
@@ -224,9 +232,8 @@ public:
 		animationTime += currentTime - previousTime;
 		previousTime = currentTime;
 
-
-		// FBO 바인딩
-		//glBindFramebuffer(GL_FRAMEBUFFER, FBO);
+		//FBO 바인딩
+		glBindFramebuffer(GL_FRAMEBUFFER, FBO);
 
 		const GLfloat black[] = { 0.0f, 0.0f, 0.0f, 1.0f };
 		glClearBufferfv(GL_COLOR, 0, black);
@@ -236,54 +243,63 @@ public:
 		glEnable(GL_BLEND);
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-		/*
-		// Do 1st Rendering (겨울비 씬) ------------------------------------------
+#pragma region Do 1st Rendering
+		// 카메라 매트릭스 계산 -------------------------------------------------------------
+		vmath::mat4 lookAt = camera[4].lookat();
+		vmath::mat4 projM = camera[4].perspective(info.windowWidth, info.windowHeight, 0.1f, 1000.0f);
 
+		// 라이팅 설정 ---------------------------------------
+		float r = 2.f;
+		vmath::vec3 lightColor(1.0f, 1.0f, 1.0f);
+		vmath::vec3 viewPos = camera[4].eye;
+
+
+		// 모델 그리기 ---------------------------------------
+		glUseProgram(shader_program);
+
+		glUniformMatrix4fv(glGetUniformLocation(shader_program, "projection"), 1, GL_FALSE, projM);
+		glUniformMatrix4fv(glGetUniformLocation(shader_program, "view"), 1, GL_FALSE, lookAt);
+
+		glUniform3fv(glGetUniformLocation(shader_program, "viewPos"), 1, viewPos);
+
+		glUniform3f(glGetUniformLocation(shader_program, "dirLight.direction"), 0.0f, 0.0f, -1.0f);
+		glUniform3f(glGetUniformLocation(shader_program, "dirLight.ambient"), 0.3f, 0.3f, 0.3f);
+		glUniform3f(glGetUniformLocation(shader_program, "dirLight.diffuse"), 0.4f, 0.4f, 0.4f);
+		glUniform3f(glGetUniformLocation(shader_program, "dirLight.specular"), 0.5f, 0.5f, 0.5f);
+		
+		vmath::mat4 model = vmath::translate(0.0f, 0.0f, -10.f) *
+			vmath::rotate(0.f, 0.f, 0.f) *
+			vmath::scale(1.0f);
+		glUniformMatrix4fv(glGetUniformLocation(shader_program, "model"), 1, GL_FALSE, model);
+		apartment.draw(shader_program);
 
 		// 기본 Framebuffer로 되돌리기
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 		glDisable(GL_DEPTH_TEST);
+#pragma endregion
 
+#pragma region Do 2nd Camera & Lighting
+		glClearBufferfv(GL_COLOR, 0, black);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		glEnable(GL_DEPTH_TEST);
+		glEnable(GL_CULL_FACE);
+		glEnable(GL_BLEND);
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
 		// 버퍼들의 값 지우기
 		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT);
 
-		glUseProgram(shader_program);
-
-		// FBO Texture를 쉐이더 프로그램에 연결
-		glUniform1i(glGetUniformLocation(shader_program, "material.diffuse"), 0);
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, FBO_texture);
-
-		*/
-
-
 		// 카메라 매트릭스 계산 -------------------------------------------------------------
-		vmath::mat4 lookAt = camera.lookat();
-		vmath::mat4 projM = camera.perspective(info.windowWidth, info.windowHeight, 0.1f, 1000.0f);
+		lookAt = camera[0].lookat();
+		projM = camera[0].perspective(info.windowWidth, info.windowHeight, 0.1f, 1000.0f);
 
 		// 라이팅 설정 ---------------------------------------
-		float r = 2.f;
 		vmath::vec3 pointLightPos[] = { vmath::vec3(0.0f,4.0f,4.0f), vmath::vec3(0.0f,8.0f,0.0f) };
-		vmath::vec3 lightColor(1.0f, 1.0f, 1.0f);
-		vmath::vec3 viewPos = camera.eye;
+		viewPos = camera[0].eye;
 
-		// 액자와 인터랙션 범위 설정
-
-		if (( - 10.f <= camera.eye[0] && camera.eye[0] < -4.f) && ( -2.f <= camera.eye[2] && camera.eye[2] < 2.f))
-			appleRoom = true;
-		else
-			appleRoom = false;
-
-		if ((4.f <= camera.eye[0] && camera.eye[0] < 10.f) && (-2.f <= camera.eye[2] && camera.eye[2] < 2.f))
-			objectRoom = true;
-		else
-			objectRoom = false;
 
 		// 모델 그리기 ---------------------------------------
-		glUseProgram(shader_program);
-
 		glUniformMatrix4fv(glGetUniformLocation(shader_program, "projection"), 1, GL_FALSE, projM);
 		glUniformMatrix4fv(glGetUniformLocation(shader_program, "view"), 1, GL_FALSE, lookAt);
 
@@ -307,11 +323,10 @@ public:
 		glUniform1f(glGetUniformLocation(shader_program, "pointLights[1].c1"), 0.09f);
 		glUniform1f(glGetUniformLocation(shader_program, "pointLights[1].c2"), 0.032f);
 
-		
 
-		/*
-		glUniform3fv(glGetUniformLocation(shader_program, "spotLight.position"), 1, camera.eye);
-		glUniform3fv(glGetUniformLocation(shader_program, "spotLight.direction"), 1, camera.center - camera.eye);
+
+		glUniform3fv(glGetUniformLocation(shader_program, "spotLight.position"), 1, camera[0].eye);
+		glUniform3fv(glGetUniformLocation(shader_program, "spotLight.direction"), 1, camera[0].center - camera[0].eye);
 		glUniform1f(glGetUniformLocation(shader_program, "spotLight.cutOff"), (float)cos(vmath::radians(12.5)));
 		glUniform1f(glGetUniformLocation(shader_program, "spotLight.outerCutOff"), (float)cos(vmath::radians(15.5)));
 		glUniform1f(glGetUniformLocation(shader_program, "spotLight.c1"), 0.09f);
@@ -319,21 +334,26 @@ public:
 		glUniform3f(glGetUniformLocation(shader_program, "spotLight.ambient"), 0.0f, 0.0f, 0.0f);
 		glUniform3f(glGetUniformLocation(shader_program, "spotLight.diffuse"), 1.0f, 1.0f, 1.0f);
 		glUniform3f(glGetUniformLocation(shader_program, "spotLight.specular"), 1.0f, 1.0f, 1.0f);
-		*/
+#pragma endregion		
 
-		// DO 2nd Rendering
-		/*
-		vmath::mat4 model = vmath::translate(0.0f, 0.0f, 0.f) *
-			vmath::rotate(0.f, 0.f, 0.f) *
-			vmath::scale(1.0f);
-		glUniformMatrix4fv(glGetUniformLocation(shader_program, "model"), 1, GL_FALSE, model);
-		apartment.draw(shader_program);
-		*/
+// Model Rendering
+#pragma region Main Room
 		// Main Room -------------------------------------------------------------------
 		vmath::mat4 main_room_translate = vmath::translate(center[0], 0.f, 0.f);
+		// 액자와 인터랙션 범위 설정
+		if ((-10.f <= camera[0].eye[0] && camera[0].eye[0] < -4.f) && (-2.f <= camera[0].eye[2] && camera[0].eye[2] < 2.f))
+			appleRoom = true;
+		else
+			appleRoom = false;
+
+		if ((4.f <= camera[0].eye[0] && camera[0].eye[0] < 10.f) && (-2.f <= camera[0].eye[2] && camera[0].eye[2] < 2.f))
+			objectRoom = true;
+		else
+			objectRoom = false;
+		
 
 		// frame
-		vmath::mat4 model = vmath::translate(-7.5f, 6.25f, 0.f) *
+		model = vmath::translate(-7.5f, 6.25f, 0.f) *
 			vmath::rotate(0.f, -90.f, 0.f) *
 			vmath::scale(3.0f);
 		glUniformMatrix4fv(glGetUniformLocation(shader_program, "model"), 1, GL_FALSE, main_room_translate * model);
@@ -403,9 +423,15 @@ public:
 		main_ceiling.draw(shader_program);
 
 
+		model = vmath::translate(0.f, 5.f, -5.f) *
+			vmath::scale(1.0f);
+		glUniformMatrix4fv(glGetUniformLocation(shader_program, "model"), 1, GL_FALSE, main_room_translate * model);
+		winter_rain.loadDiffuseMap(FBO_texture);
+		winter_rain.draw(shader_program);
 
+#pragma endregion
 
-
+#pragma region Green Apple Room
 		// Green Apple Room -----------------------------------------------------------
 		vmath::mat4 apple_room_translate = vmath::translate(center[1], 0.f, 0.f);
 
@@ -444,11 +470,19 @@ public:
 		glUniformMatrix4fv(glGetUniformLocation(shader_program, "model"), 1, GL_FALSE, apple_room_translate * model);
 		green_apple_ceiling.draw(shader_program);
 
+		// 피라미드 그리기 ---------------------------------------
+		for (int i = 0; i < 2; i++)
+		{
+			float scaleFactor = 0.05f;
+			vmath::mat4 transform = vmath::translate(pointLightPos[i]) *
+				vmath::scale(scaleFactor, scaleFactor, scaleFactor);
+			glUniformMatrix4fv(glGetUniformLocation(shader_program, "model"), 1, GL_FALSE, apple_room_translate * transform);
 
+			pyramidModel.draw(shader_program);
+		}
+#pragma endregion
 
-
-
-
+#pragma region ObjectRoom
 		// Object Room -----------------------------------------------------------
 		vmath::mat4 object_room_translate = vmath::translate(center[2], 0.f, 0.f);
 
@@ -541,21 +575,8 @@ public:
 		glUniformMatrix4fv(glGetUniformLocation(shader_program, "model"), 1, GL_FALSE, object_room_translate* model);
 		glass.draw(shader_program);
 
-
-
-
-
-
-		// 피라미드 그리기 ---------------------------------------
-		for (int i = 0; i < 2; i++)
-		{
-			float scaleFactor = 0.05f;
-			vmath::mat4 transform = vmath::translate(pointLightPos[i]) *
-				vmath::scale(scaleFactor, scaleFactor, scaleFactor);
-			glUniformMatrix4fv(glGetUniformLocation(shader_program, "model"), 1, GL_FALSE, apple_room_translate * transform);
-
-			pyramidModel.draw(shader_program);
-		}
+#pragma endregion
+	
 
 	}
 
@@ -569,30 +590,30 @@ public:
 				drawModel = !drawModel;
 				break;
 			case 'W':
-				camera.moveAlongDirection(FORWARD);
+				camera[0].moveAlongDirection(FORWARD);
 				break;
 			case 'S':
-				camera.moveAlongDirection(BACKWARD);
+				camera[0].moveAlongDirection(BACKWARD);
 				break;
 			case 'D':
-				camera.moveAlongDirection(RIGHT);
+				camera[0].moveAlongDirection(RIGHT);
 				break;
 			case 'A':
-				camera.moveAlongDirection(LEFT);
+				camera[0].moveAlongDirection(LEFT);
 				break;
 			case 'F':
 				if (appleRoom == true && objectRoom == false) {
-					camera = vmath::vec3(center[1], 3.f, 6.f);
-					camera.center[0] = center[1];
+					camera[0] = vmath::vec3(center[1], 3.f, 6.f);
+					camera[0].center[0] = center[1];
 				}
 				else if (appleRoom == false && objectRoom == true) {
-					camera = vmath::vec3(center[2], 3.f, 6.f);
-					camera.center[0] = center[2];
+					camera[0] = vmath::vec3(center[2], 3.f, 6.f);
+					camera[0].center[0] = center[2];
 				}
 				break;
 			case 'R':
-				camera = vmath::vec3(center[0], 5.25f, 0.f);
-				camera.center = vmath::vec3(center[0], 6.25, -5.0f);
+				camera[0] = vmath::vec3(center[0], 5.25f, 0.f);
+				camera[0].center = vmath::vec3(center[0], 6.25, -5.0f);
 				break;
 			default:
 				break;
@@ -623,7 +644,7 @@ public:
 		{
 			//objYangle += float(x - mousePostion[0]) / 2.f;
 			//mousePostion = vmath::vec2(float(x), float(y));
-			camera.rotate(x - last_mouse_x, y - last_mouse_y); // 0.f
+			camera[0].rotate(x - last_mouse_x, y - last_mouse_y); // 0.f
 			last_mouse_x = x;
 			last_mouse_y = y;
 		}
@@ -639,7 +660,7 @@ public:
 
 		//wheelPos = pos;
 
-		camera.onMouseWheel(pos);
+		camera[0].onMouseWheel(pos);
 	}
 
 	virtual void onResize(int w, int h)
@@ -684,6 +705,7 @@ private:
 	Model glass, comb, bedding, bedframe, closet, brush, soap, match, carpet[2];
 	vmath::vec3 objPosition;
 
+	Primitive winter_rain;
 	Primitive main_floor, main_wall, main_ceiling;
 	Primitive green_apple_floor, green_apple_wall, green_apple_ceiling;
 	Primitive object_floor, object_wall, object_ceiling;
@@ -703,7 +725,7 @@ private:
 
 	int last_mouse_x, last_mouse_y;
 
-	Camera camera;
+	Camera camera[5];
 };
 
 // DECLARE_MAIN의 하나뿐인 인스턴스

@@ -118,6 +118,17 @@ public:
 		return false;
 	}
 
+	bool loadDiffuseMap(GLuint texture) {
+		if (texture) {
+			diffuseMap = texture;
+			useDiffuseMap = true;
+			return true;
+		}
+
+		useDiffuseMap = false;
+		return false;
+	}
+
 	bool loadSpecularMap(const char *_filepath) {
 		if (loadTextureFile(specularMap, _filepath)) {
 			useSpecularMap = true;
@@ -127,6 +138,18 @@ public:
 		useSpecularMap = false;
 		return false;
 	}	
+
+	bool loadSpecularMap(GLuint texture)
+	{
+		if (texture) {
+			specularMap = texture;
+			useSpecularMap = true;
+			return true;
+		}
+
+		useSpecularMap = false;
+		return false;
+	}
 
 	void draw(GLuint _shaderID) {
 		glUniform3fv(glGetUniformLocation(_shaderID, "material.defaultAmbient"), 1, defaultAmbient);
