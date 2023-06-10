@@ -16,7 +16,7 @@ enum PRIMITIVE_TYPE {
 
 class Primitive {
 public:
-	float shininess;
+	float shininess, alpha , diffuse_control;
 	GLuint diffuseMap, specularMap;
 	vmath::vec3 defaultAmbient, defaultDiffuse, defaultSpecular;
 
@@ -29,6 +29,9 @@ private:
 public:
 	Primitive() {
 		shininess = 32.f;
+		alpha = 1.0f;
+		diffuse_control = 1.0f;
+
 		useDiffuseMap = false;
 		useSpecularMap = false;
 
@@ -274,6 +277,8 @@ public:
 
 		glUniform1i(glGetUniformLocation(_shaderID, "useNormal"), 1);
 		glUniform1f(glGetUniformLocation(_shaderID, "material.shininess"), shininess);
+		glUniform1f(glGetUniformLocation(_shaderID, "material.alpha"), alpha);
+		glUniform1f(glGetUniformLocation(_shaderID, "material.diffuse_control"), diffuse_control);
 
 		if (useDiffuseMap) {
 			glUniform1i(glGetUniformLocation(_shaderID, "material.diffuse"), 0);

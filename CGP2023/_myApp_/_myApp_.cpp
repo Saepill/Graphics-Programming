@@ -62,6 +62,11 @@ public:
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, FBO_texture, 0);
 
+		glGenRenderbuffers(1, &RBO);
+		glBindRenderbuffer(GL_RENDERBUFFER, RBO);
+		glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, info.windowWidth, info.windowHeight);
+		glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, RBO);
+
 		// 잘 연결되었는지 확인
 		if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
 			glfwTerminate();
@@ -143,6 +148,16 @@ public:
 		carpet[1].loadDiffuseMap("carpet2_basecolor.png");
 
 		// 겨울비
+		for (int i = 0 ; i < 4; i++)
+			man[i].init(PLANE_FRONT, 1.0f, 3.3f, 1.0f, 1.0f);
+
+		man[0].loadDiffuseMap("man1.png");
+		man[1].loadDiffuseMap("man2.png");
+		man[2].loadDiffuseMap("man3.png");
+		man[3].loadDiffuseMap("man4.png");
+
+		sky.init(PLANE_FRONT, 1.5f, 1.2f, 3.0f, 3.0f);
+		sky.loadDiffuseMap("sky.jpg");
 		winter_rain.init(PLANE_FRONT, 1.5f, 1.2f, 1.0f, 1.0f);
 
 		// Main Room Box ------------------------------------------------------------------------
@@ -208,10 +223,16 @@ public:
 		camera[0].up = vmath::vec3(0.0, 1.0f, 0.0);
 		camera[0].fov = 50.f;
 
-		camera[4].eye = vmath::vec3(0.0f, 5.25f, 0.f);
-		camera[4].center = vmath::vec3(0.0f, 6.25, -5.0f);
+		camera[4].eye = vmath::vec3(3.5f, 11.25f, 2.f);
+		camera[4].center = vmath::vec3(3.5f, 11.25f, -1.0f);
 		camera[4].up = vmath::vec3(0.0, 1.0f, 0.0);
 		camera[4].fov = 50.f;
+		
+		// Man position --------------------------------------------------------
+		float interval = 4.f;
+		for (int i = 0; i < 12; i++) {
+			man_position.push_back(-20.5f + interval * i);
+		}
 	}
 
 	// 애플리케이션 끝날 때 호출된다.
@@ -243,6 +264,12 @@ public:
 		glEnable(GL_BLEND);
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
+		glBindTexture(GL_TEXTURE_2D, FBO_texture);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, info.windowWidth, info.windowHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, FBO_texture, 0);
+
 #pragma region Do 1st Rendering
 		// 카메라 매트릭스 계산 -------------------------------------------------------------
 		vmath::mat4 lookAt = camera[4].lookat();
@@ -262,12 +289,71 @@ public:
 
 		glUniform3fv(glGetUniformLocation(shader_program, "viewPos"), 1, viewPos);
 
-		glUniform3f(glGetUniformLocation(shader_program, "dirLight.direction"), 0.0f, 0.0f, -1.0f);
+		glUniform3f(glGetUniformLocation(shader_program, "dirLight.direction"), 1.0f, 0.0f, -1.0f);
 		glUniform3f(glGetUniformLocation(shader_program, "dirLight.ambient"), 0.3f, 0.3f, 0.3f);
-		glUniform3f(glGetUniformLocation(shader_program, "dirLight.diffuse"), 0.4f, 0.4f, 0.4f);
-		glUniform3f(glGetUniformLocation(shader_program, "dirLight.specular"), 0.5f, 0.5f, 0.5f);
+		glUniform3f(glGetUniformLocation(shader_program, "dirLight.diffuse"), 0.5f, 0.5f, 0.5f);
+		glUniform3f(glGetUniformLocation(shader_program, "dirLight.specular"), 0.6f, 0.6f, 0.6f);
 		
-		vmath::mat4 model = vmath::translate(0.0f, 0.0f, -10.f) *
+		vmath::mat4 model = vmath::translate(0.0f, 0.0f, -40.f) *
+			vmath::rotate(0.f, 0.f, 0.f) *
+			vmath::scale(30.0f);
+		glUniformMatrix4fv(glGetUniformLocation(shader_program, "model"), 1, GL_FALSE, model);
+		sky.draw(shader_program);
+
+
+
+		// first line
+		for (int i = 0; i < 4 ; i ++ ) {
+			for (int j = 0; j < 3; j++) {
+				for (int k = 0; k < 3; k++) {
+					model = vmath::translate(man_position[i + 4 * j] + (k * 2.0f), (float)cos(animationTime) + 3.0f + (k * 6.0f), -10.0f) *
+						vmath::rotate(0.f, 0.f, 0.f) *
+						vmath::scale(1.0f);
+					glUniformMatrix4fv(glGetUniformLocation(shader_program, "model"), 1, GL_FALSE, model);
+					man[i].diffuse_control = 1.0f;
+					man[i].alpha = 1.0f;
+					man[i].draw(shader_program);
+				}
+			}
+		}
+
+		// second line
+		for (int i = 0; i < 4; i++) {
+			for (int j = 0; j < 3; j++) {
+				for (int k = 0; k < 3; k++) {
+					model = vmath::translate(man_position[i + 4 * j] + (k * 3.0f), (float)sin(animationTime) + 6.0f + (k * 6.0f), -12.0f) *
+						vmath::rotate(0.f, 0.f, 0.f) *
+						vmath::scale(0.7f);
+					glUniformMatrix4fv(glGetUniformLocation(shader_program, "model"), 1, GL_FALSE, model);
+					man[i].diffuse_control = 0.8f;
+					man[i].alpha = 0.9f;
+					man[i].draw(shader_program);
+				}
+			}
+		}
+
+		// third line
+		for (int i = 0; i < 4; i++) {
+			for (int j = 0; j < 3; j++) {
+				for (int k = 0; k < 3; k++) {
+					model = vmath::translate(man_position[i + 4 * j] + k, (float)cos(animationTime)*0.5f + 9.0f + (k * 6.0f), -14.0f) *
+						vmath::rotate(0.f, 0.f, 0.f) *
+						vmath::scale(0.5f);
+					glUniformMatrix4fv(glGetUniformLocation(shader_program, "model"), 1, GL_FALSE, model);
+					man[i].diffuse_control = 0.7f;
+					man[i].alpha = 0.6f;
+					man[i].draw(shader_program);
+				}
+			}
+		}
+
+		model = vmath::translate(1.0f, 0.0f, -20.f) *
+			vmath::rotate(0.f, 0.f, 0.f) *
+			vmath::scale(1.0f);
+		glUniformMatrix4fv(glGetUniformLocation(shader_program, "model"), 1, GL_FALSE, model);
+		apartment.draw(shader_program);
+
+		model = vmath::translate(20.0f, 6.0f, -1.f) *
 			vmath::rotate(0.f, 0.f, 0.f) *
 			vmath::scale(1.0f);
 		glUniformMatrix4fv(glGetUniformLocation(shader_program, "model"), 1, GL_FALSE, model);
@@ -277,7 +363,7 @@ public:
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 		glDisable(GL_DEPTH_TEST);
 #pragma endregion
-
+		
 #pragma region Do 2nd Camera & Lighting
 		glClearBufferfv(GL_COLOR, 0, black);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -424,7 +510,7 @@ public:
 
 
 		model = vmath::translate(0.f, 5.f, -5.f) *
-			vmath::scale(1.0f);
+			vmath::scale(2.0f);
 		glUniformMatrix4fv(glGetUniformLocation(shader_program, "model"), 1, GL_FALSE, main_room_translate * model);
 		winter_rain.loadDiffuseMap(FBO_texture);
 		winter_rain.draw(shader_program);
@@ -577,7 +663,7 @@ public:
 
 #pragma endregion
 	
-
+	
 	}
 
 	virtual void onKey(int key, int action) {
@@ -697,6 +783,7 @@ private:
 	GLuint shader_program;
 	GLuint FBO;
 	GLuint FBO_texture;
+	GLuint RBO;
 
 	Model pyramidModel;
 	Model apartment;
@@ -705,7 +792,8 @@ private:
 	Model glass, comb, bedding, bedframe, closet, brush, soap, match, carpet[2];
 	vmath::vec3 objPosition;
 
-	Primitive winter_rain;
+
+	Primitive sky, winter_rain, man[4];
 	Primitive main_floor, main_wall, main_ceiling;
 	Primitive green_apple_floor, green_apple_wall, green_apple_ceiling;
 	Primitive object_floor, object_wall, object_ceiling;
@@ -726,6 +814,7 @@ private:
 	int last_mouse_x, last_mouse_y;
 
 	Camera camera[5];
+	std::vector<float> man_position;
 };
 
 // DECLARE_MAIN의 하나뿐인 인스턴스

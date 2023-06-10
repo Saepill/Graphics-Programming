@@ -86,8 +86,11 @@ void main()
 
 		if(material.useDiffuseMap != 0)
 		{
-			matAmbientColor = vec3(texture(material.diffuse, vsTexCoord)) * material.diffuse_control;
-			matDiffuseColor = vec3(texture(material.diffuse, vsTexCoord)) * material.diffuse_control;
+            vec4 texColor = texture(material.diffuse, vsTexCoord);
+            if(texColor.a < 0.1)
+                discard;
+            matAmbientColor = vec3(texColor) * material.diffuse_control;
+			matDiffuseColor = vec3(texColor) * material.diffuse_control;
 		}
 
 		if(material.useSpecularMap != 0)
@@ -104,7 +107,7 @@ void main()
 		}
 		// phase 3: spot light
 		result += CalcSpotLight(spotLight, norm, vsPos, viewDir);    
-    
+        
 		fragColor = vec4(result, material.alpha);
 	}
     else

@@ -129,7 +129,8 @@ public:
 		return false;
 	}
 
-	bool loadSpecularMap(const char *_filepath) {
+	bool loadSpecularMap(
+		const char *_filepath) {
 		if (loadTextureFile(specularMap, _filepath)) {
 			useSpecularMap = true;
 			return true;
