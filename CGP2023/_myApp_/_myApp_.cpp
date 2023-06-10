@@ -55,19 +55,19 @@ public:
 		frame_objectroom.loadOBJ("model/frame.obj");
 		frame_objectroom.loadDiffuseMap("frame_objectroom.png");
 		frame_objectroom.loadSpecularMap("frame_specular.png");
-		frame_objectroom.diffuse_control = 0.7f;
+		frame_objectroom.diffuse_control = 0.3f;
 
 		frame_appleroom.init();
 		frame_appleroom.loadOBJ("model/frame.obj");
 		frame_appleroom.loadDiffuseMap("frame_appleroom.png");
 		frame_appleroom.loadSpecularMap("frame_specular.png");
-		frame_appleroom.diffuse_control = 0.7f;
+		frame_appleroom.diffuse_control = 0.3f;
 
 		frame_piperoom.init();
 		frame_piperoom.loadOBJ("model/frame.obj");
 		frame_piperoom.loadDiffuseMap("frame_piperoom.png");
 		frame_piperoom.loadSpecularMap("frame_specular.png");
-		frame_piperoom.diffuse_control = 0.3f;
+		frame_piperoom.diffuse_control = 0.2f;
 		
 		
 		apple.init();
@@ -121,11 +121,11 @@ public:
 		carpet[1].loadDiffuseMap("carpet2_basecolor.png");
 
 		// Main Room Box ------------------------------------------------------------------------
-		main_floor.init(PLANE_TOP, 1.0f, 0.0f, 5.0f, 5.0f);
+		main_floor.init(PLANE_TOP, 1.5f, 0.0f, 5.0f, 5.0f);
 		main_floor.defaultAmbient = vmath::vec3(0.1f, 0.1f, 0.1f);
-		main_wall.init(PLANE_FRONT, 1.0f, 0.8f, 3.0f, 3.0f);
+		main_wall.init(PLANE_FRONT, 1.5f, 1.2f, 3.0f, 3.0f);
 		main_wall.defaultAmbient = vmath::vec3(0.1f, 0.1f, 0.1f);
-		main_ceiling.init(PLANE_BOTTOM, 1.0f, 1.0f, 5.0f, 5.0f);
+		main_ceiling.init(PLANE_BOTTOM, 1.5f, 1.2f, 5.0f, 5.0f);
 		main_ceiling.defaultAmbient = vmath::vec3(0.1f, 0.1f, 0.1f);
 	
 
@@ -178,8 +178,8 @@ public:
 		glEnable(GL_MULTISAMPLE);
 
 		// Camera setup ------------------------------------------------------
-		camera.eye = vmath::vec3(0.0f, 1.0f, 5.f);
-		camera.center = vmath::vec3(0.0f, 0.0, 0.0);
+		camera.eye = vmath::vec3(0.0f, 5.25f, 0.f);
+		camera.center = vmath::vec3(0.0f, 6.25, -5.0f);
 		camera.up = vmath::vec3(0.0, 1.0f, 0.0);
 		camera.fov = 50.f;
 	}
@@ -193,6 +193,7 @@ public:
 	// 렌더링 virtual 함수를 작성해서 오버라이딩한다.
 	virtual void render(double currentTime) // currentTime : 프로그램이 실행된 이후 시간이 얼마나 걸렸는지 저장되는 변수
 	{	
+		
 		if (pause) {
 			previousTime = currentTime;
 			return; // render 함수가 멈추도록
@@ -229,6 +230,17 @@ public:
 		vmath::vec3 lightColor(1.0f, 1.0f, 1.0f);
 		vmath::vec3 viewPos = camera.eye;
 
+		// 카메라 위치 정보
+
+		if (( - 10.f <= camera.eye[0] && camera.eye[0] < -4.f) && ( -2.f <= camera.eye[2] && camera.eye[2] < 2.f))
+			appleRoom = true;
+		else
+			appleRoom = false;
+
+		if ((4.f <= camera.eye[0] && camera.eye[0] < 10.f) && (-2.f <= camera.eye[2] && camera.eye[2] < 2.f))
+			objectRoom = true;
+		else
+			objectRoom = false;
 
 		// 모델 그리기 ---------------------------------------
 		glUseProgram(shader_program);
@@ -256,16 +268,21 @@ public:
 		glUniform1f(glGetUniformLocation(shader_program, "pointLights[1].c1"), 0.09f);
 		glUniform1f(glGetUniformLocation(shader_program, "pointLights[1].c2"), 0.032f);
 
-		//glUniform3fv(glGetUniformLocation(shader_program, "spotLight.position"), 1, camera.eye);
-		//glUniform3fv(glGetUniformLocation(shader_program, "spotLight.direction"), 1, camera.center - camera.eye);
-		//glUniform1f(glGetUniformLocation(shader_program, "spotLight.cutOff"), (float)cos(vmath::radians(12.5)));
-		//glUniform1f(glGetUniformLocation(shader_program, "spotLight.outerCutOff"), (float)cos(vmath::radians(15.5)));
-		//glUniform1f(glGetUniformLocation(shader_program, "spotLight.c1"), 0.09f);
-		//glUniform1f(glGetUniformLocation(shader_program, "spotLight.c2"), 0.032f);
-		//glUniform3f(glGetUniformLocation(shader_program, "spotLight.ambient"), 0.0f, 0.0f, 0.0f);
-		//glUniform3f(glGetUniformLocation(shader_program, "spotLight.diffuse"), 1.0f, 1.0f, 1.0f);
-		//glUniform3f(glGetUniformLocation(shader_program, "spotLight.specular"), 1.0f, 1.0f, 1.0f);
+		
 
+
+
+		/*
+		glUniform3fv(glGetUniformLocation(shader_program, "spotLight.position"), 1, camera.eye);
+		glUniform3fv(glGetUniformLocation(shader_program, "spotLight.direction"), 1, camera.center - camera.eye);
+		glUniform1f(glGetUniformLocation(shader_program, "spotLight.cutOff"), (float)cos(vmath::radians(12.5)));
+		glUniform1f(glGetUniformLocation(shader_program, "spotLight.outerCutOff"), (float)cos(vmath::radians(15.5)));
+		glUniform1f(glGetUniformLocation(shader_program, "spotLight.c1"), 0.09f);
+		glUniform1f(glGetUniformLocation(shader_program, "spotLight.c2"), 0.032f);
+		glUniform3f(glGetUniformLocation(shader_program, "spotLight.ambient"), 0.0f, 0.0f, 0.0f);
+		glUniform3f(glGetUniformLocation(shader_program, "spotLight.diffuse"), 1.0f, 1.0f, 1.0f);
+		glUniform3f(glGetUniformLocation(shader_program, "spotLight.specular"), 1.0f, 1.0f, 1.0f);
+		*/
 
 
 
@@ -274,19 +291,42 @@ public:
 		vmath::mat4 main_room_translate = vmath::translate(center[0], 0.f, 0.f);
 
 		// frame
-		vmath::mat4 model = vmath::translate(-5.0f, 4.25f, 0.f) *
+		vmath::mat4 model = vmath::translate(-7.5f, 6.25f, 0.f) *
 			vmath::rotate(0.f, -90.f, 0.f) *
 			vmath::scale(3.0f);
 		glUniformMatrix4fv(glGetUniformLocation(shader_program, "model"), 1, GL_FALSE, main_room_translate * model);
+
+		if (appleRoom == true)
+		{
+			frame_appleroom.diffuse_control = 0.8f;
+		}
+		else
+		{
+			frame_appleroom.diffuse_control = 0.2f;
+		}
 		frame_appleroom.draw(shader_program);
 
-		model = vmath::translate(5.0f, 4.25f, 0.f) *
+
+
+		model = vmath::translate(7.5f, 6.25f, 0.f) *
 			vmath::rotate(0.f, 90.f, 0.f) *
 			vmath::scale(3.0f);
 		glUniformMatrix4fv(glGetUniformLocation(shader_program, "model"), 1, GL_FALSE, main_room_translate * model);
+
+		if (objectRoom == true)
+		{
+			frame_objectroom.diffuse_control = 0.8f;
+		}
+		else
+		{
+			frame_objectroom.diffuse_control = 0.2f;
+		}
 		frame_objectroom.draw(shader_program);
 
-		model = vmath::translate(0.0f, 4.25f, -5.f) *
+
+
+
+		model = vmath::translate(0.0f, 6.25f, -7.5f) *
 			vmath::rotate(0.f, 180.f, 0.f) *
 			vmath::scale(3.0f);
 		glUniformMatrix4fv(glGetUniformLocation(shader_program, "model"), 1, GL_FALSE, main_room_translate * model);
@@ -298,24 +338,24 @@ public:
 		main_floor.draw(shader_program);										   
 																					   
 		// BACK																		   
-		model = vmath::translate(0.f, 0.f, -10.f) *									   
+		model = vmath::translate(0.f, 0.f, -15.f) *									   
 			vmath::scale(10.0f);													   
 		glUniformMatrix4fv(glGetUniformLocation(shader_program, "model"), 1, GL_FALSE, main_room_translate * model);
 		main_wall.draw(shader_program);										   
 		// LEFT																		   
-		model = vmath::translate(-10.f, 0.f, 0.f) *									   
+		model = vmath::translate(-15.f, 0.f, 0.f) *									   
 			vmath::rotate(0.0f, 90.f, 0.0f) *										   
 			vmath::scale(10.0f);													   
 		glUniformMatrix4fv(glGetUniformLocation(shader_program, "model"), 1, GL_FALSE, main_room_translate * model);
 		main_wall.draw(shader_program);										   
 		// Right																	   
-		model = vmath::translate(10.f, 0.f, 0.f) *									   
+		model = vmath::translate(15.f, 0.f, 0.f) *									   
 			vmath::rotate(0.0f, -90.f, 0.0f) *										   
 			vmath::scale(10.0f);													   
 		glUniformMatrix4fv(glGetUniformLocation(shader_program, "model"), 1, GL_FALSE, main_room_translate * model);
 		main_wall.draw(shader_program);										   
 		// TOP																		   
-		model = vmath::translate(0.f, 8.0f, 0.f) *									   
+		model = vmath::translate(0.f, 12.0f, 0.f) *									   
 			vmath::scale(10.0f);													   
 		glUniformMatrix4fv(glGetUniformLocation(shader_program, "model"), 1, GL_FALSE, main_room_translate * model);
 		main_ceiling.draw(shader_program);
@@ -425,6 +465,7 @@ public:
 		glUniformMatrix4fv(glGetUniformLocation(shader_program, "model"), 1, GL_FALSE, object_room_translate* model);
 		carpet[1].draw(shader_program);
 
+
 		// BOTTOM
 		model = vmath::scale(10.0f);
 		glUniformMatrix4fv(glGetUniformLocation(shader_program, "model"), 1, GL_FALSE, object_room_translate* model);
@@ -474,9 +515,6 @@ public:
 			pyramidModel.draw(shader_program);
 		}
 
-		// ObjectRoom -----------------------------------------------------
-		// object
-
 	}
 
 	virtual void onKey(int key, int action) {
@@ -499,6 +537,20 @@ public:
 				break;
 			case 'A':
 				camera.moveAlongDirection(LEFT);
+				break;
+			case 'F':
+				if (appleRoom == true && objectRoom == false) {
+					camera = vmath::vec3(center[1], 3.f, 6.f);
+					camera.center[0] = center[1];
+				}
+				else if (appleRoom == false && objectRoom == true) {
+					camera = vmath::vec3(center[2], 3.f, 6.f);
+					camera.center[0] = center[2];
+				}
+				break;
+			case 'R':
+				camera = vmath::vec3(center[0], 5.25f, 0.f);
+				camera.center = vmath::vec3(center[0], 6.25, -5.0f);
 				break;
 			default:
 				break;
@@ -529,7 +581,7 @@ public:
 		{
 			//objYangle += float(x - mousePostion[0]) / 2.f;
 			//mousePostion = vmath::vec2(float(x), float(y));
-			camera.rotate(x - last_mouse_x, y - last_mouse_y);
+			camera.rotate(x - last_mouse_x, y - last_mouse_y); // 0.f
 			last_mouse_x = x;
 			last_mouse_y = y;
 		}
@@ -565,10 +617,13 @@ public:
 		previousTime = 0;
 		lineMode = false;
 		mouseDown = false;
+		appleRoom = false;
+		objectRoom = false;
+		pipeRoom = false;
 		
 		center[0] = 0.0f; // 메인방
-		center[1] = 10.f; // 사과방
-		center[2] = 20.0f; // 사물방
+		center[1] = 1000.f; // 사과방
+		center[2] = 1010.0f; // 사물방
 		center[3] = 0.0f; // 착시방
 		//wheelPos = 0;
 
@@ -592,6 +647,7 @@ private:
 	float objYangle;
 	float center[4];
 	bool drawModel, drawLight;
+	bool appleRoom, objectRoom, pipeRoom;
 	bool lineMode;
 	bool edgeKernelMode;
 	bool pause;
